@@ -1,0 +1,11 @@
+.official-overlay{position:fixed;inset:0;z-index:500;background:#f4f6f9;color:#35445e}
+.official-toolbar{height:92px;padding:0 28px;display:flex;align-items:center;gap:16px;background:#fff;border-bottom:1px solid #e2e7ef}
+.official-title{display:flex;flex-direction:column;gap:7px;flex:1;min-width:0}
+.official-title strong{font-size:17px;font-weight:600;letter-spacing:.3px}
+.official-title small{font-size:11px;color:#8592a5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.official-title i{display:inline-block;width:6px;height:6px;background:#68a790;border-radius:50%;margin-right:6px}
+.official-toolbar button{display:flex;align-items:center;gap:7px;height:36px;padding:0 15px;border:1px solid #dce3ee;border-radius:6px;background:#fff;color:#64738b;font-size:12px}
+.official-toolbar button:first-child{border:0;background:#f0f3fa;color:#4969aa}
+.official-toolbar button .icon{width:15px;height:15px}
+.official-placeholder{position:absolute;inset:108px 16px 16px;border:1px solid #e0e6ef;border-radius:8px;background:#fff;display:grid;place-items:center;color:#9aa6b6}
+.desktop-edition .qr-display{background:linear-gradient(140deg,#f4f7fd,#eef2f8)}

@@ -1,0 +1,59 @@
+{
+  "name": "xiaozhu-shujin",
+  "version": "1.1.0",
+  "description": "筱竹书瑾 · 小红书内容与软件开发工作台",
+  "author": "筱竹书瑾",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "desktop": "electron .",
+    "dist:win": "electron-builder --win nsis portable --config.electronDist=node_modules/electron/dist",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.64.1"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "main": "desktop/main.mjs",
+  "build": {
+    "appId": "cn.xiaozhu.shujin",
+    "productName": "筱竹书瑾",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "*.html",
+      "*.css",
+      "*.js",
+      "*.mjs",
+      "desktop/**",
+      "!tests/**",
+      "!release/**",
+      "!.local/**",
+      "!test-results/**"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "signExecutable": false,
+      "icon": "desktop/icon.ico"
+    },
+    "nsis": {
+      "artifactName": "XiaozhuShujin-Setup-${version}-${arch}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "XiaozhuShujin-${version}-${arch}-Portable.${ext}"
+    }
+  }
+}

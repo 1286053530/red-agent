@@ -1,0 +1,17 @@
+node_modules/
+release/
+.local/
+test-results/
+.env
+.env.*
+*.log
+*.pem
+*.p12
+*.pfx
+*.key
+credentials*
+secrets*
+workspace.json
+workspace.tmp
+Thumbs.db
+.DS_Store

@@ -1,0 +1,11 @@
+.post-card{position:relative}
+@media(min-width:1051px){
+  .nav-item{font-size:12px}.workspace-picker strong,.source-row strong{font-size:12px}.workspace-picker small,.source-row small,.profile small{font-size:10px}.profile strong{font-size:11px}.nav-caption{font-size:10px}
+  .breadcrumb,.today{font-size:11px}.environment-tag{font-size:10px}
+  .eyebrow{font-size:9px}.page-intro p{font-size:12px}h1{font-size:31px}.primary-button,.secondary-button{font-size:11px;height:37px}
+  .metric-label{font-size:11px}.metric-value{font-size:32px}.metric-unit{font-size:10px}.metric-foot,.delta{font-size:9px}
+  .section-heading h2,.view-card h2{font-size:17px}.section-heading p,.view-card-heading p{font-size:11px}.text-action{font-size:10px}
+  .tab{font-size:11px}.filter-chip{font-size:10px}.sort-select select{font-size:10px}.search-box input{font-size:10px}
+  .category-label,.growth-badge{font-size:9px}.post-title{font-size:12px}.post-description{font-size:10px}.author-info,.post-time,.post-stats{font-size:9px}.feed-footer{font-size:9px}
+  .rail-title strong{font-size:13px}.rail-title small{font-size:9px}.daily-brief p,.analysis-copy,.chat-intro p{font-size:10px}.brief-button,.rail-section-label,.analysis-section-title{font-size:10px}.analysis-note-title,.opportunity-card p{font-size:9px}.keyword-row span,.prompt-chips button,.chat-form input{font-size:8px}.rail-disclaimer{font-size:8px}
+}
