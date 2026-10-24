@@ -1,0 +1,9 @@
+[
+  {
+    "id": "software-development",
+    "name": "软件开发",
+    "version": "1.0.0",
+    "description": "用于代码分析、功能开发、缺陷修复、重构和代码审查；按项目技术栈读取补充指引。",
+    "resources": ["references/javascript-node.md", "references/python.md", "references/code-review.md"]
+  }
+]

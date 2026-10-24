@@ -1,85 +1,70 @@
-import { app, BrowserWindow, session } from 'electron';
+import { app, session, BrowserWindow } from 'electron';
 import assert from 'node:assert/strict';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { writeFile } from 'node:fs/promises';
-import { mkdirSync } from 'node:fs';
-import { DesktopXhs } from '../desktop/xhs.mjs';
+import { pathToFileURL } from 'node:url';
+const {DesktopXhs,officialUrl}=await import(process.argv.includes('--packaged')
+  ? pathToFileURL(resolve('release/win-unpacked/resources/app.asar/desktop/xhs.mjs')).href
+  : new URL('../desktop/xhs.mjs',import.meta.url).href);
 
-const folder=resolve('.local/desktop-fixture');
-mkdirSync(folder,{recursive:true});
+const folder=resolve('.local/manual-access-check');
 app.setPath('userData',resolve(folder,'profile'));
 const verify=process.argv.includes('--verify-persistence');
 const HOME='https://www.xiaohongshu.com/explore';
-const fixture=`<!doctype html><html><body><div id="app"><div class="channel-list-content"><button id="notification">通知</button><button id="private">消息</button></div><article class="note-item" data-note-id="fixture"><a class="cover" href="/explore/fixture"></a><span class="title">测试推荐笔记</span><span class="author"><span class="name">测试作者</span></span></article></div><script>const loggedIn=document.cookie.includes('fixture_auth=1');window.__INITIAL_STATE__={user:{loggedIn,userInfo:{nickname:'桌面测试账号',userId:'fixture'}}};if(loggedIn)document.querySelector('.channel-list-content').insertAdjacentHTML('beforeend','<a href="/user/profile/fixture">桌面测试账号</a>');else document.body.insertAdjacentHTML('beforeend','<div class="login-container">扫码登录</div>');for(const [id,container,item,text] of [['notification','notification-container','notification-item','测试互动通知'],['private','conversation-list','conversation-item','测试私信会话']])document.getElementById(id).onclick=()=>{document.querySelectorAll('.panel').forEach(n=>n.remove());document.body.insertAdjacentHTML('beforeend','<div class="panel '+container+'"><div class="'+item+'">'+text+'</div></div>')};</script></body></html>`;
-let win,xhs;
+app.on('window-all-closed',()=>{});
 app.whenReady().then(async()=>{
-try {
-  win=new BrowserWindow({show:false,webPreferences:{sandbox:true,nodeIntegration:false,contextIsolation:true}});
-  const partition='persist:isolated-desktop-test';
-  const profile=session.fromPartition(partition);
-  await profile.protocol.handle('https',request=>new Response(new URL(request.url).hostname==='www.xiaohongshu.com'?fixture:'',{headers:{'Content-Type':'text/html; charset=utf-8'}}));
-  xhs=new DesktopXhs(win,{partition});
-  if(verify) {
-    assert.equal((await xhs.status()).profileSaved,true);
-    await xhs.restore();
-    assert.equal((await xhs.status()).status,'connected','login restored after a full process restart');
-    assert.equal(xhs.visible,false,'restoring session keeps workbench visible');
-    const restoring=xhs.restore();
-    const connecting=xhs.connect();
-    await restoring;
-    assert.equal((await connecting).status,'connected','opening login waits for startup restoration');
-    await xhs.disconnect();
-    assert.equal((await xhs.status()).status,'disconnected');
-    assert.equal((await profile.cookies.get({url:HOME})).length,0);
-    assert.equal((await xhs.status()).profileSaved,false);
-  } else {
-    await profile.clearStorageData();
-    assert.equal((await xhs.connect()).status,'awaiting_login');
-    assert.equal(xhs.visible,false,'inline login keeps the account card visible');
-    await xhs.evaluate(()=>{
-      const panel=document.querySelector('.login-container');
-      panel.innerHTML='<h2>扫码登录</h2><div class="qrcode"><canvas width="160" height="160"></canvas></div><p id="qrState">打开小红书扫一扫</p>';
-      const c=panel.querySelector('canvas').getContext('2d');
-      c.fillStyle='white';c.fillRect(0,0,160,160);c.fillStyle='black';c.fillRect(12,12,35,35);
+  try {
+    const partition='persist:manual-access-fixture';
+    const profile=session.fromPartition(partition);
+    let network=0,heartbeats=0;
+    await profile.protocol.handle('https',request=>{
+      assert.equal(new URL(request.url).hostname,'www.xiaohongshu.com');
+      network++;
+      if(new URL(request.url).pathname==='/heartbeat'){heartbeats++;return new Response('fixture');}
+      return new Response('<html><head><title>Isolated official page</title></head><body>Manual fixture<script>setInterval(()=>fetch("https://www.xiaohongshu.com/heartbeat"),150);</script></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}});
     });
-    const qr=await xhs.status();
-    assert.equal(qr.login.status,'ready');
-    assert.match(qr.login.image,/^data:image\/png;base64,/,'desktop returns the official QR image to the card');
-    assert.equal(xhs.visible,false,'capturing the QR does not open the official overlay');
-    await xhs.evaluate(()=>document.querySelector('#qrState').textContent='二维码已过期，点击刷新');
-    assert.equal((await xhs.status()).login.image,'');
-    assert.equal((await xhs.status()).login.status,'expired');
-    await xhs.evaluate(()=>document.querySelector('#qrState').textContent='扫码成功，请在手机确认登录');
-    assert.equal((await xhs.status()).login.status,'scanned');
-    assert.equal((await xhs.status()).login.image,'');
-    await xhs.evaluate(()=>document.body.insertAdjacentHTML('beforeend','<div class="verify-container">请完成验证</div>'));
-    assert.equal((await xhs.status()).login.status,'restricted');
-    assert.equal((await xhs.status()).login.image,'');
-    await xhs.connect(true);
-    assert.equal((await xhs.status()).login.status,'loading','refresh clears stale QR and reloads the official page');
-    await assert.rejects(xhs.recommendations(),/扫码登录/);
-    const remote=await xhs.evaluate(()=>({node:typeof require,bridge:typeof window.shujinDesktop}));
-    assert.deepEqual(remote,{node:'undefined',bridge:'undefined'});
-    await profile.cookies.set({url:HOME,name:'fixture_auth',value:'1',expirationDate:Math.floor(Date.now()/1000)+3600});
-    await xhs.navigate(HOME);
-    assert.equal((await xhs.status()).status,'connected');
-    assert.equal((await xhs.status()).login.image,'');
-    assert.equal((await xhs.recommendations()).items[0].title,'测试推荐笔记');
-    assert.match((await xhs.messages('notifications')).items[0].text,/互动通知/);
-    assert.match((await xhs.messages('private')).items[0].text,/私信会话/);
-    xhs.busy=true;
-    await assert.rejects(xhs.connect(),/上一项操作/);
-    xhs.busy=false;
-    await assert.rejects(xhs.navigate('https://example.com'),/仅支持/);
-  }
-  await xhs.close();
-  await writeFile(resolve(folder,verify?'persistence.json':'session.json'),JSON.stringify({passed:true,phase:verify?'process restart, restore and clear':'login, recommendations, notifications, private messages, isolation and concurrency'},null,2));
-  console.log('DESKTOP_SESSION_PASS '+(verify?'persistence':'session'));
-  win.destroy();app.quit();
-} catch(error) {
-  console.error(error.stack);
-  if(xhs)await xhs.close().catch(()=>{});
-  if(win&&!win.isDestroyed())win.destroy();
-  app.exit(1);
-}
+    const opened=[];
+    const win=new BrowserWindow({show:false,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});
+    const xhs=new DesktopXhs(win,{partition,openExternal:async url=>opened.push(url)});
+    if(!verify){
+      await profile.clearStorageData();
+      await profile.cookies.set({url:HOME,name:'fixture_auth',value:'1',expirationDate:Math.floor(Date.now()/1000)+3600});
+    }
+    assert.equal((await profile.cookies.get({url:HOME})).length,1);
+    for(let i=0;i<5;i++)assert.equal((await xhs.status()).status,'automation_disabled');
+    for(const action of [()=>xhs.connect(),()=>xhs.connect(true),()=>xhs.recommendations(),()=>xhs.messages('private')]){
+      await assert.rejects(action,error=>error.status===410);
+    }
+    assert.equal(xhs.view,null);
+    assert.equal(typeof xhs.restore,'undefined');
+    assert.equal(network,0);assert.deepEqual(opened,[]);
+    assert.equal(officialUrl('https://www.xiaohongshu.com/explore'),true);
+    assert.equal(officialUrl('https://www.xiaohongshu.com.evil.example/'),false);
+    await assert.rejects(()=>xhs.open('https://evil.example'),error=>error.status===400);
+    await xhs.open();assert.deepEqual(opened,[]);assert.ok(xhs.view);
+    const contents=xhs.view.webContents;
+    assert.deepEqual(await contents.executeJavaScript('({node:typeof require,bridge:typeof window.shujinDesktop})'),{node:'undefined',bridge:'undefined'});
+    for(let i=0;i<40&&heartbeats===0;i++)await new Promise(resolve=>setTimeout(resolve,100));
+    assert.ok(network>0);assert.ok(heartbeats>0);
+    await xhs.close();
+    await new Promise(resolve=>setTimeout(resolve,100));
+    assert.equal(contents.isDestroyed(),true);assert.equal(xhs.view,null);
+    const afterClose=network;
+    await new Promise(resolve=>setTimeout(resolve,500));
+    assert.equal(network,afterClose,'closing must stop the fixture page timers');
+    await assert.rejects(()=>profile.fetch(HOME),'closed partition must reject even non-page network requests');
+    assert.equal(network,afterClose);
+    await xhs.open();win.emit('minimize');
+    await new Promise(resolve=>setTimeout(resolve,100));
+    assert.equal(xhs.view,null);win.emit('restore');assert.equal(xhs.view,null);
+    await xhs.openInBrowser();assert.deepEqual(opened,[HOME]);
+    if(verify){await xhs.disconnect();assert.equal((await profile.cookies.get({url:HOME})).length,0);}
+    else await profile.cookies.flushStore();
+    await xhs.close();
+    win.destroy();
+    await mkdir(folder,{recursive:true});
+    await writeFile(resolve(folder,verify?'persistence.json':'session.json'),JSON.stringify({passed:true,manualOnly:true,idleRequests:0,automaticOpens:0,fixtureRequests:network,closedRequests:0,explicitExternalOpenCount:opened.length,embeddedPageDestroyed:true,currentSessionCleared:verify},null,2));
+    console.log('MANUAL_ACCESS_PASS '+(verify?'persistence-and-cleanup':'idle-and-explicit-open'));
+    app.exit(0);
+  }catch(error){console.error(error.stack);app.exit(1);}
 });

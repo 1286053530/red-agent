@@ -1,7 +1,8 @@
 .account-status{display:inline-flex;align-items:center;gap:7px;flex-shrink:0;padding:8px 10px;border:1px solid #e7ebf2;border-radius:5px;background:#fff;color:#8c97a9;font-size:9px}
+.manual-official{position:fixed;inset:0;z-index:500;background:#f5f6f8}.manual-official-toolbar{height:66px;padding:12px 20px;display:flex;gap:16px;align-items:center;background:#fff;border-bottom:1px solid #e5e9f1}.manual-official-toolbar strong{flex:1;color:#35445e;font-size:14px}.manual-official>p{height:38px;padding:9px 20px;margin:0;color:#7a6670;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .account-status>span{width:6px;height:6px;border-radius:50%;background:#c5cbd5}
 .account-status.is-connected{color:#44836b;background:#f6fbf8;border-color:#dcece3}.account-status.is-connected>span{background:#70ac8b}.account-status.is-waiting{color:#a48648;background:#fffcf4;border-color:#eee5cd}.account-status.is-waiting>span{background:#c7a35d}
-.account-hero{min-height:295px;position:relative;overflow:hidden;border:1px solid #e5e9f1;border-radius:9px;background:linear-gradient(112deg,#fff 0%,#fafbfe 47%,#edf2fc 100%);display:grid;grid-template-columns:1.05fr .95fr;margin-bottom:31px}
+.account-hero{min-height:295px;position:relative;overflow:hidden;border:1px solid #e5e9f1;border-radius:9px;background:linear-gradient(112deg,#fff 0%,#fafbfe 47%,#edf2fc 100%);display:block;margin-bottom:31px}
 .account-hero-copy{position:relative;z-index:2;padding:29px 32px}
 .account-brand-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;background:#fff0ef;border:1px solid #f7e3e2;color:#dc6266;font-size:15px;font-weight:650;margin-bottom:18px}
 .account-eyebrow{display:block;color:#a3aec0;font-size:8px;letter-spacing:1.45px}

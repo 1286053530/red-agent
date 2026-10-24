@@ -9,11 +9,9 @@
     <link rel="stylesheet" href="./desktop.css" />
     <link rel="stylesheet" href="./account.css" />
     <link rel="stylesheet" href="./developer.css" />
-    <link rel="stylesheet" href="./desktop-client.css" />
     <script src="./app.js" defer></script>
     <script src="./account.js" defer></script>
     <script src="./developer.js" defer></script>
-    <script src="./desktop-client.js" defer></script>
   </head>
   <body>
     <svg class="svg-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -94,35 +92,20 @@
             </section>
 
             <section class="workspace-view hidden" id="accountView">
-              <div class="page-intro"><div><div class="eyebrow"><span class="eyebrow-line"></span> ACCOUNT CONNECTION</div><h1>连接你的内容世界<span class="heading-period">.</span></h1><p>登录自己的小红书，把推荐内容与消息带回工作台。</p></div><span class="account-status" data-account-status><span></span>未连接账号</span></div>
-              <div class="account-hero">
-                <div class="account-hero-copy"><div class="account-brand-icon">小</div><span class="account-eyebrow">YOUR ACCOUNT · YOUR WORKSPACE</span><h2>你的兴趣，<br/>也是下一份工作灵感。</h2><p>在当前页面扫码登录小红书。登录后，在这里浏览你的推荐内容、查看互动通知与私信会话。</p><div class="account-actions"><button class="primary-button" data-connect-xhs><svg class="icon"><use href="#i-account"/></svg><span>扫码登录小红书</span><svg class="icon"><use href="#i-arrow"/></svg></button><span class="local-session-label"><span></span> 登录会话仅保存在本机</span></div></div>
-                <div class="qr-login-area"><div class="qr-login-card" id="qrLoginCard" data-state="idle"><span class="qr-card-kicker"><span></span> REDNOTE · ACCOUNT ACCESS</span><h3 id="qrLoginTitle">扫码登录小红书</h3><div class="qr-display"><img class="hidden" id="loginQrImage" alt="小红书官方登录二维码，请使用手机小红书扫一扫"/><div id="qrStatusVisual" class="qr-status-visual"><svg class="icon"><use href="#i-account"/></svg></div><i class="qr-corner top-left"></i><i class="qr-corner top-right"></i><i class="qr-corner bottom-left"></i><i class="qr-corner bottom-right"></i></div><p id="qrLoginHint" aria-live="polite">点击下方按钮，二维码将在这里显示</p><button class="qr-action" id="qrStartButton" data-connect-xhs>获取登录二维码</button><button class="qr-action hidden" id="refreshQrButton"><svg class="icon"><use href="#i-refresh"/></svg>刷新二维码</button><button class="qr-action hidden" id="qrSuccessButton" data-open-recommendations>进入我的推荐 <svg class="icon"><use href="#i-arrow"/></svg></button><span class="qr-privacy"><svg class="icon"><use href="#i-check"/></svg> 官方二维码 · 本机会话</span></div></div>
-              </div>
-              <div class="connection-panel" aria-live="polite"><div class="connection-panel-main"><span class="connection-symbol"><svg class="icon"><use href="#i-account"/></svg></span><div><strong id="connectionTitle">准备连接你的账号</strong><p id="connectionDescription">点击扫码登录，在本页使用手机小红书扫描官方二维码。</p></div></div><div class="connection-panel-actions"><button class="text-action" id="checkConnectionButton"><svg class="icon"><use href="#i-refresh"/></svg>检查状态</button><button class="text-action hidden" id="clearConnectionButton">清除本机登录</button></div><p class="connection-error hidden" id="connectionError" role="alert"></p></div>
-              <div class="connection-steps"><div><span>01</span><div><strong>获取官方二维码</strong><p>二维码直接显示在本页</p></div></div><div><span>02</span><div><strong>手机扫码确认</strong><p>使用小红书 App 扫一扫</p></div></div><div><span>03</span><div><strong>开始浏览内容</strong><p>自动连接推荐内容与消息</p></div></div></div>
-              <div class="account-section-heading"><div><h2>你的内容工作空间</h2><p>连接后，从这里继续</p></div><span class="account-protection"><svg class="icon"><use href="#i-check"/></svg> 个人账号 · 本地会话</span></div>
-              <div class="account-entry-grid">
-                <article class="account-entry-card"><div class="entry-icon entry-red"><svg class="icon"><use href="#i-spark"/></svg></div><span class="entry-state">个性化内容</span><h3>我的推荐</h3><p>查看官方页面中的推荐笔记，保留标题、作者与点赞数，随时打开原文。</p><button data-open-recommendations class="entry-link">进入我的推荐 <svg class="icon"><use href="#i-arrow"/></svg></button></article>
-                <article class="account-entry-card"><div class="entry-icon entry-blue"><svg class="icon"><use href="#i-message"/></svg></div><span class="entry-state">互动与会话</span><h3>消息中心</h3><p>查看官网中可读取的通知和私信列表；完整会话可在连接的客户端内查看。</p><button data-open-messages class="entry-link">进入消息中心 <svg class="icon"><use href="#i-arrow"/></svg></button></article>
-              </div>
-              <div class="account-access-note"><div class="access-note-icon"><svg class="icon"><use href="#i-check"/></svg></div><div><strong>由你登录，在本机连接</strong><p>使用小红书 App 扫描本页展示的官方二维码，并在手机确认登录。无需输入密码，登录会话保存在本机。二维码过期可在本页刷新；官网限制登录时会显示实际原因。</p></div><a href="https://www.xiaohongshu.com/explore" data-open-xhs target="_blank" rel="noopener noreferrer">打开小红书官网 <svg class="icon"><use href="#i-arrow"/></svg></a></div>
+              <div class="page-intro"><div><div class="eyebrow"><span class="eyebrow-line"></span> OFFICIAL ACCESS</div><h1>小红书官网入口<span class="heading-period">.</span></h1><p>在官方 App 或系统浏览器中，由你手动浏览。</p></div><span class="account-status" data-account-status><span></span>自动采集已停用</span></div>
+              <div class="account-hero"><div class="account-hero-copy"><div class="account-brand-icon">小</div><span class="account-eyebrow">MANUAL ACCESS ONLY</span><h2>回到官方页面，<br/>由你掌握浏览节奏。</h2><p>工作台已停用自动登录、后台访问和内容采集。只有点击下方入口，才会在系统浏览器中打开官网。</p><div class="account-actions"><a class="primary-button" href="https://www.xiaohongshu.com/explore" target="_blank" rel="noopener noreferrer" data-open-xhs>在系统浏览器打开官网 <svg class="icon"><use href="#i-arrow"/></svg></a></div></div></div>
+              <div class="connection-panel" aria-live="polite"><div class="connection-panel-main"><span class="connection-symbol"><svg class="icon"><use href="#i-account"/></svg></span><div><strong>账号状态请以官方 App 为准</strong><p>工作台不再检测登录状态、提取二维码或同步推荐与消息。若账号已收到告警，请先暂停使用并按官方提示处理。</p></div></div><div class="connection-panel-actions"><button class="text-action" id="clearConnectionButton">清理本软件旧登录数据</button></div><p class="connection-error hidden" id="connectionError" role="alert"></p></div>
+              <div class="account-access-note"><div class="access-note-icon"><svg class="icon"><use href="#i-check"/></svg></div><div><strong>浏览器会话由官方页面管理</strong><p>清理操作仅影响旧版本保存在本软件中的登录数据，不会清理系统浏览器，也不会访问官网执行退出。</p></div></div>
             </section>
 
             <section class="workspace-view hidden" id="recommendationsView">
-              <div class="page-intro"><div><div class="eyebrow"><span class="eyebrow-line"></span> PERSONAL DISCOVERY</div><h1>我的推荐<span class="heading-period">.</span></h1><p>来自你的账号，把每一次浏览变成灵感积累。</p></div><span class="account-status" data-account-status><span></span>未连接账号</span></div>
-              <div class="personal-toolbar"><div class="personal-source"><span class="source-logo">小</span><div><strong>小红书 · 推荐内容</strong><small id="recommendationsUpdated">登录后读取官方页面</small></div></div><button class="secondary-button" id="syncRecommendations"><svg class="icon"><use href="#i-refresh"/></svg>刷新推荐</button></div>
-              <div id="recommendationsNotice" class="personal-notice hidden" role="status"></div>
-              <div id="recommendationsContent" aria-live="polite"></div>
-              <div class="personal-load-more hidden" id="loadMoreContainer"><button class="secondary-button" id="loadMoreRecommendations">加载更多推荐 <svg class="icon"><use href="#i-arrow"/></svg></button><span>读取官方页面已加载的内容</span></div>
+              <div class="page-intro"><div><div class="eyebrow"><span class="eyebrow-line"></span> PERSONAL DISCOVERY</div><h1>我的推荐<span class="heading-period">.</span></h1><p>推荐内容请在官方页面手动查看。</p></div><span class="account-status" data-account-status><span></span>自动采集已停用</span></div>
+              <div class="personal-empty"><span class="personal-empty-icon"><svg class="icon"><use href="#i-spark"/></svg></span><h2>推荐自动读取已停用</h2><p>切换到此页面不会访问小红书，也不会自动加载、滚动或采集内容。你可以主动打开官网，自行浏览推荐。</p><a class="primary-button" href="https://www.xiaohongshu.com/explore" target="_blank" rel="noopener noreferrer" data-open-xhs>手动打开小红书官网 <svg class="icon"><use href="#i-arrow"/></svg></a></div>
             </section>
 
             <section class="workspace-view hidden" id="messagesView">
-              <div class="page-intro"><div><div class="eyebrow"><span class="eyebrow-line"></span> MESSAGE CENTER</div><h1>消息中心<span class="heading-period">.</span></h1><p>关注每一份互动，掌握与你有关的新动态。</p></div><span class="account-status" data-account-status><span></span>未连接账号</span></div>
-              <div class="personal-toolbar"><div class="tabs" role="tablist" aria-label="消息类型"><button class="tab active" role="tab" aria-selected="true" data-message-kind="notifications">互动通知</button><button class="tab" role="tab" aria-selected="false" data-message-kind="private">私信会话</button></div><button class="secondary-button" id="syncMessages"><svg class="icon"><use href="#i-refresh"/></svg>刷新消息</button></div>
-              <div class="message-meta"><span id="messagesUpdated">登录后读取官方页面</span><button class="text-action" id="openOfficialMessages">在官方页面查看 <svg class="icon"><use href="#i-arrow"/></svg></button></div>
-              <div id="messagesNotice" class="personal-notice hidden" role="status"></div>
-              <div id="messagesContent" aria-live="polite"></div>
+              <div class="page-intro"><div><div class="eyebrow"><span class="eyebrow-line"></span> MESSAGE CENTER</div><h1>消息中心<span class="heading-period">.</span></h1><p>互动通知与私信请在官方 App 或官网手动查看。</p></div><span class="account-status" data-account-status><span></span>消息同步已停用</span></div>
+              <div class="personal-empty"><span class="personal-empty-icon"><svg class="icon"><use href="#i-message"/></svg></span><h2>消息自动读取已停用</h2><p>工作台不再读取通知、私信或自动点击消息入口。请在官方页面中自行操作。</p><a class="primary-button" href="https://www.xiaohongshu.com/explore" target="_blank" rel="noopener noreferrer" data-open-xhs>手动打开小红书官网 <svg class="icon"><use href="#i-arrow"/></svg></a></div>
             </section>
 
             <section class="workspace-view hidden" id="tasksView"><div class="page-intro"><div><div class="eyebrow"><span class="eyebrow-line"></span> MONITORING TASKS</div><h1>监测任务<span class="heading-period">.</span></h1><p>围绕关键词建立观察清单，持续跟踪内容变化。</p></div><button class="primary-button" data-open-task><svg class="icon"><use href="#i-plus"/></svg>新建监测任务</button></div><div class="view-card"><div class="view-card-heading"><div><h2>任务列表</h2><p>本地创建的任务保存在当前浏览器</p></div><span class="soft-badge" id="taskCountBadge">3 个任务</span></div><div class="task-list" id="taskList"></div></div></section>

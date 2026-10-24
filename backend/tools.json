@@ -1,0 +1,229 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "list_files",
+      "description": "List project source file paths. Sensitive and generated files are excluded.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "read_file",
+      "description": "Read lines of a UTF-8 source file. Defaults to first 200 lines, max 400 lines. Follow hasMore to read further.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Project-relative file path"
+          },
+          "start_line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "end_line": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search_files",
+      "description": "Search a literal string in project source files. Returns matching lines.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Literal text to find"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "propose_file",
+      "description": "Write a complete source file if task allows edits; otherwise stage it for review. Must read existing file first. Never delete files.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Project-relative path"
+          },
+          "content": {
+            "type": "string",
+            "description": "Complete new file content, not a patch"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for the change"
+          }
+        },
+        "required": [
+          "path",
+          "content",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "update_plan",
+      "description": "Persist a short task checkpoint: goal interpretation, observable acceptance criteria, steps, failures and next action. Preserve facts, not hidden reasoning.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string",
+            "description": "Task understanding and observed state"
+          },
+          "criteria": {
+            "type": "string",
+            "description": "Observable acceptance criteria"
+          },
+          "next_action": {
+            "type": "string",
+            "description": "Next step"
+          },
+          "failure": {
+            "type": "string",
+            "description": "Last failure and planned correction"
+          }
+        },
+        "required": [
+          "summary",
+          "criteria",
+          "next_action"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "run_command",
+      "description": "Run a project verification command. node --test/--check or npm test/run test/build/lint/typecheck/check only. May await approval. Wait for actual exit; running is not success. Use command ID with command_result. No shell, installs, publish or arbitrary scripts.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "node",
+              "npm"
+            ]
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "purpose": {
+            "type": "string",
+            "description": "What user acceptance criterion this validates"
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 120000
+          },
+          "retry_id": {
+            "type": "string",
+            "description": "Explicitly retry a failed/interrupted command ID after inspecting its result"
+          }
+        },
+        "required": [
+          "command",
+          "args",
+          "purpose"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "command_result",
+      "description": "Read status and bounded output of a command by ID. Poll running commands before assuming success; do not run them again.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Command ID"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "review_diff",
+      "description": "Inspect applied changes, external conflicts and current project fingerprint. Run after the last modification and after checks.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "finish_task",
+      "description": "Declare completion with evidence. Change tasks require a successful behavioral check against current files and a current diff review. A summary alone cannot complete a task.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string",
+            "description": "What is complete and why"
+          },
+          "evidence": {
+            "type": "string",
+            "description": "Concrete observed evidence and remaining limits"
+          }
+        },
+        "required": [
+          "summary",
+          "evidence"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+]

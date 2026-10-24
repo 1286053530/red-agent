@@ -1,79 +1,83 @@
-# 筱竹书瑾
+# 筱竹书瑾 2.1.0
 
-小红书内容工作台与软件开发 Agent，提供 Windows x64 桌面客户端。
+小红书内容工作台与软件开发 Agent。后端使用 **Python + FastAPI + Uvicorn**，前端使用原生 HTML/CSS/JavaScript，Windows 桌面窗口使用 Electron。
 
-开发背景、需求演进、排错过程、验证证据与当前限制见 [开发记录](docs/DEVELOPMENT.md)。
+Python 负责 HTTP API、项目与模型配置、模型协议适配、Agent 循环、文件审核与恢复、子进程检查和任务记录。Electron 负责窗口、文件夹选择器及手动内嵌官网页面，通过私有进程通道与 Python 通信。
 
-## 桌面版
+**2.0.2 支持用户主动打开内嵌官网，自动化采集继续停用。** 点击「在工作台内打开官网」后，由你在官方页面手动登录、浏览和回复。返回工作台、最小化或隐藏窗口会销毁官网页面并关闭该会话的网络连接；只有再次点击才会打开。不会检测登录、提取二维码、自动刷新、点击、滚动或采集消息。新内嵌会话与旧自动化会话分开，不导入旧 Cookie。官网自身仍会发出正常页面请求，内嵌环境仍可能被平台限制；已有告警不会因此撤销。
 
-- 安装版：`release/XiaozhuShujin-Setup-1.1.0-x64.exe`，可选择安装目录并创建桌面快捷方式。
-- 免安装版：`release/XiaozhuShujin-1.1.0-x64-Portable.exe`，双击启动。
-- 使用桌面版本和内置 `node --test` / `node --check` 不需要另装 Node.js、Edge 或启动本地开发服务。运行项目的 npm 检查脚本需要本机安装 Node.js / npm 和项目依赖。
+## 本地运行
 
-在「小红书账号」点击「扫码登录小红书」，官方二维码会显示在当前页面右侧卡片，用手机小红书扫码并确认即可。二维码过期时点击「刷新二维码」。如官网要求额外验证，点击「打开官网 / 完成验证」进入客户端内的完整官方页面，完成后点击顶部「返回工作台」。所有操作使用同一个持久化官网会话；重启会自动恢复，清除本机登录仅清理本软件的会话，不影响其他浏览器。
+需要 Python 3.10+；桌面开发和 Node 项目检查需要 Node.js 22.12+。PowerShell：
 
-旧网页版使用独立无头 Edge 会话，官网返回过 `300012 / IP存在风险`；这不能证明用户普通浏览器也有相同网络问题。桌面版已改用可见的官方页面和自己的持久会话，未导入用户其他浏览器的 Cookie，也不绕过官方验证。本机实测官方登录面板和真实二维码均正常显示，未出现上述风险提示。手机确认和真实账号登录后的推荐、私信仍需用户扫码验证；隔离页面测试已验证登录判断、推荐与通知/私信读取，以及完整进程重启后的会话恢复与清除。
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.lock.txt
+npm ci
+.\.venv\Scripts\python.exe -m backend
+```
 
-桌面版数据保存在 Windows 用户目录 `%APPDATA%/筱竹书瑾/`（具体目录按 Electron 的应用名确定），包含官网会话与 `developer/` 项目/模型配置。旧网页版的 `.local/developer/` 配置不会自动覆盖桌面数据。内容雷达、监测任务、策略简报和研究助理仍使用明确标注的演示数据。
+打开 <http://127.0.0.1:3000>。`npm start` 也会启动项目虚拟环境中的 Python。旧版 `.local/developer/` 数据路径与 AES-256-GCM 加密格式保持兼容。
 
-## 开发与打包
+桌面版通过隔离的 Electron WebContentsView 内嵌官网，也可主动选择系统浏览器。官网页面没有 Node 权限和工作台桥接。网页版仍通过普通外链打开官网，不绕过网站的框架嵌入限制。后端不依赖 Playwright；它仅用于隔离测试。旧 connect、login/refresh、recommendations、messages 接口继续返回 HTTP 410。
 
-需要 Node.js 22+：
+Linux/macOS 使用 `.venv/bin/python`；安装和构建依赖可使用 `requirements-dev.txt`，本次完整锁文件针对 Windows Python 3.10。桌面打包目前只验证 Windows x64。
 
-```sh
-npm install
+## Windows 桌面与构建
+
+```powershell
+Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
 npm run desktop
 npm test
+npm run test:desktop
 npm run dist:win
 ```
 
-若从其他 Electron 应用的终端启动，需先删除 `ELECTRON_RUN_AS_NODE` 环境变量。国内网络下载 Electron 失败时可设置 `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`，构建工具可设置 `ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/`。安装包当前未做发布者代码签名。
+`npm run dist:win` 先用 PyInstaller 生成 Python 后端，再用 electron-builder 生成：
 
-桌面会话测试（先清除 `ELECTRON_RUN_AS_NODE`）：
+- `release/XiaozhuShujin-Setup-2.1.0-x64.exe`
+- `release/XiaozhuShujin-2.1.0-x64-Portable.exe`
 
-```sh
+安装包内置 Python 运行时、后端依赖和前端资源，无需另装 Python。桌面 Node 检查使用 Electron 自带运行时；项目 npm 脚本仍需要本机 Node.js/npm 和项目依赖。安装包尚未签名。
+
+国内下载失败时，在 `npm ci` 前设置 `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`，构建工具可设置 `ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/`。`SHUJIN_PYTHON` 可指定开发模式解释器，打包模式固定使用内置后端。
+
+开发数据仍保存在 Electron 用户目录的 `developer/`。升级前退出旧客户端，建议备份原数据目录；旧版和新版不要同时写同一份配置。手动内嵌页面使用独立持久会话，重新打开时浏览器可按官网规则保留登录；启动不自动加载官网。点击「清理本软件登录数据」并确认后，清理本软件内嵌及旧会话，不影响系统浏览器。
+
+## 开发 Agent
+
+2.1.0 内置「软件开发 Skill v1.0.0」，新任务默认启用。工作空间中可选择 Skill、查看指引或选择不加载。它指导代码分析、开发、排错、重构与审查，包含按需加载的 JavaScript/Node、Python 和代码审查参考。任务会记录 Skill 版本及摘要；继续已有任务时沿用启动时的内容，不随升级静默变化。旧任务没有 Skill 快照时不追加入新的指引。
+
+Skill 不增加工具权限，不替代模型能力或实际测试。当前自动检查仍限 Node/npm；Python 项目可以分析、提出代码修改，但不能直接运行 pytest，也不能以未执行的检查标为已验证完成。详见 [内置 Skill 说明](docs/BUILTIN_SKILLS.md)。
+
+进入「工作空间 / 开发 Agent」，导入项目，填写模型接口前缀、模型名和 API Key。支持 OpenAI Chat Completions 兼容接口和 Anthropic Messages，模型必须支持工具调用。接口前缀例如 `https://api.openai.com/v1`，服务追加对应端点。
+
+选择只读分析或代码修改与验证，写明目标和完成标准。修改和命令默认逐项审核，也可分别授权本次任务自动修改、执行检查。任务和读取的源码会发给所选模型服务；这不是离线模型。
+
+Agent 保存计划、读取源码、提出修改、执行检查、根据失败纠错并复核差异。只有 `finish_task` 能完成任务。修改任务必须有当前源码的行为测试通过记录和测试后的最终复核；语法检查、模型文字、待审核变更、运行中命令、过期结果不能完成任务。
+
+支持 `node --test [相对路径]`、`node --check 文件`、`npm test`、`npm run test|build|lint|typecheck|check`。后端改为 Python，不改变当前 Agent 聚焦 JavaScript/Node 项目的范围。内置 Node 报告器排除空测试文件；npm 脚本是否覆盖业务，仍须审查脚本和测试内容。
+
+完整替换前必须读完字符分页，每页最多 12,000 字符、单文件最多 160 KB。最终复核返回真实 unified diff，超出展示上限则拒绝复核成功。快照上限为 1,200 文件、6,000 目录条目、10 层、单文件 20 MB；排除常见敏感名称、依赖、生成目录及符号链接/目录联接。
+
+每个项目只允许一个执行或待审核任务。命令最长 120 秒，保留末尾 24,000 字符，超过 2 MB 终止。相同源码与参数默认复用记录；失败后显式指定命令 ID 才重试。停止终止进程树；重启将未知结果标为中断。恢复检查摘要，拒绝覆盖外部改动，新建文件不自动删除。每次继续最多 40 轮模型、120 次工具。
+
+命令白名单不是操作系统沙箱。项目检查仍可执行本机代码，只应授权可信项目。API Key 加密保存，接口不返回原密钥；加密密钥另存于数据目录，需按本机账号权限保管。JSONL 记录可能含源码和输出，可从界面导出。
+
+## 验证与记录
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+npm run test:desktop
 npx electron tests/desktop-session.mjs
 npx electron tests/desktop-session.mjs --verify-persistence
-npx electron tests/desktop-agent.mjs
-npx electron tests/desktop-agent.mjs --packaged
+# 完成构建后：
+npx electron tests/desktop-python.mjs --packaged
+.\.venv\Scripts\python.exe scripts/smoke_app.py
 ```
 
-会话两阶段测试使用独立的本地官网页面样本和独立数据目录，不连接用户真实账号。Agent 桌面测试使用真实临时 Node 项目；`--packaged` 在构建后检查 ASAR 内的运行器和测试报告器。真实官网烟测：设置 `SHUJIN_DESKTOP_SMOKE=1` 后运行 `npm run desktop`，诊断和截图在 `.local/desktop-check/`，结束会自动退出。不要把样本测试的登录成功当成真实账号登录成功。
+测试使用实际文件、子进程和隔离浏览器。回归检查启动、切换页面、窗口恢复和等待超过原轮询周期时，小红书相关请求及后台弹出页面均为零；手动官网链接由隔离样本接收，不访问真实账号。模型响应同样是确定性样本，不代表真实模型完成率。
 
-保留网页版：`npm start` 后访问 http://localhost:3000，需要 Microsoft Edge；可设置 `XHS_BROWSER_CHANNEL=chrome`。该模式仍使用后台独立浏览器，无法保证官网允许加载二维码。推荐使用桌面版完成内嵌登录。
+当前内嵌访问说明见 [手动内嵌官网](docs/MANUAL_EMBEDDED_ACCESS.md)。历史修复见 [手动访问修复记录](docs/MANUAL_ACCESS_FIX.md)，历史架构见 [Python 迁移记录](docs/PYTHON_MIGRATION.md) 和 [原开发记录](docs/DEVELOPMENT.md)。
 
-## 软件开发 Agent
-
-点击顶部「工作空间」或左侧「开发 Agent」，进入开发工作台。点击「导入本地项目」选择本机项目文件夹，可以浏览源码、创建项目会话，并让 Agent 分析项目、搜索代码或提出文件修改。文件夹选择器不可用时会提供绝对路径输入。
-
-在「模型设置」填写配置名称、Base URL、模型名称和 API Key。支持多个厂商配置，以及 OpenAI Chat Completions 兼容协议和 Anthropic Messages API；模型需要支持工具调用。Base URL 应填写接口前缀，例如 `https://api.openai.com/v1`、`https://api.deepseek.com/v1` 或 `https://api.anthropic.com/v1`，系统会追加 `/chat/completions` 或 `/messages`。本机兼容服务可以不填 API Key。「测试连接」会发出一次真实模型请求，可能产生厂商费用。
-
-项目、会话和厂商配置在网页版保存在 `.local/developer/`，桌面版保存在用户数据目录的 `developer/`。API Key 使用 AES-256-GCM 加密，加密密钥另存在该目录；浏览器接口不返回密钥。运行任务时，任务描述、会话上下文及工具读取的源码会发送给你选择的模型服务，源码不会仅停留在本机。请按项目要求选择模型服务。此工具面向本机单用户运行。
-
-本版聚焦 JavaScript / Node 项目的修复与回归验证：一个工具调用模型、源码搜索/分页读取/写入、受控检查命令和证据验收。先选择「代码修改与验证」或「只读分析」，写清任务和可观察的完成标准。例如：**修复 add 的负数输入错误，现有测试继续通过，并说明实际验证结果**。只读分析不会修改源码或执行项目代码。
-
-### 工作闭环
-
-1. Agent 用 `update_plan` 保存对目标的理解、验收标准、失败反馈和下一步。搜索相关源码后分页读取；完整替换已有文件前必须读完当前版本。模型上下文按完整工具调用组压缩，用户目标、文件版本、计划、变更和命令事实另外保留；历史不会整体塞回模型。
-2. `propose_file` 默认生成修改前后预览，用户审核后写入。也可显式选择「本次任务自动应用源码修改」。每次写入保留原内容、目标内容和版本摘要，拒绝覆盖外部修改。已有文件可以恢复到该次修改前的内容；新建文件不会自动删除。
-3. `run_command` 支持 `node --test [相对路径]`、`node --check 文件`、`npm test` 和 `npm run test|build|lint|typecheck|check`。默认逐条展示命令、目的和 npm 脚本，批准后才运行；可单独授权本次任务的项目检查。审核和授权结束后继续同一任务，不会把审核通过当成完成。
-4. 进程关闭后才记录结果，区分通过、失败、超时、停止、启动失败和输出超限。输出保留末尾 24,000 字符；超过 2 MB 时终止进程，明确标记截断。命令最长 120 秒，停止会终止进程树。相同源码和参数不会重复执行；失败后须显式指定命令 ID 重试。结果反馈给模型，失败则继续读源码、纠错和检查。
-5. 修改任务必须有当前源码的实际行为测试成功（`node --test` 或项目 `test` 脚本，退出码 0），再执行最终 `review_diff`，才允许 `finish_task` 标记「已验证完成」。内置 Node 检查还会读取结构化测试事件，拒绝空文件和没有成功用例的结果；npm 脚本的业务有效性需要审查脚本和测试覆盖。语法检查、模型文字声明、过期测试、待审核变更和未退出的命令均不能满足完成条件。自定义业务验收还需结合测试覆盖和最终证据人工检查；系统不能仅凭退出码保证所有业务要求都已覆盖。
-
-### 边界与恢复
-
-文件工具只访问导入项目，排除常见敏感名称、符号链接、依赖和生成目录。命令使用参数数组和 `shell:false`，不提供安装、发布、删除或任意 shell 工具。**这属于命令策略，不是操作系统沙箱：项目测试和 npm 脚本仍能执行任意本机代码、读写其他目录或访问网络，只有可信项目才应授权。** 子进程仅继承运行所需环境白名单，不传递模型 API Key。需要更强隔离时应在专门的虚拟机或容器中运行可信副本。
-
-文件搜索上限为 1,200 文件、6,000 目录条目、10 层；源码读写单文件上限 160 KB，快照单文件上限 20 MB。超过快照范围会请求缩小项目，不用不完整快照宣称验证通过。生成目录和依赖目录不在源码快照内；安装依赖后应重新运行检查。每次继续最多 40 轮模型请求、120 次工具调用；达到预算会保留进度并请求帮助，可补充反馈后继续。每个项目只允许一个活跃任务；不要在其他会话的待审核任务未处理时交叉修改同一项目。
-
-停止或程序重启会保留目标、计划、执行记录和变更；未确认退出结果的命令标记为「结果未知」，不会自动重跑。写入前持久化恢复内容，重启会检查尚未确认的写入。恢复操作同样检查当前版本，避免覆盖后续修改。模型服务请求错误也会保留当前进度。
-
-### 执行记录与评测
-
-任务面板显示阶段、工具执行、退出码、输出、审核次数、失败检查次数、耗时和模型返回的 Token 用量，支持「导出记录」。完整事件保存在 `developer/runs/<task-id>.jsonl`，包括计划、模型响应、工具输入/结果与时间。模型密钥不进入事件；记录可能包含任务源码和命令输出，按项目数据保管。费用以厂商账单为准，不伪造金额。
-
-`npm test` 覆盖真实临时 Node 项目的「第一次修改失败 → 读取失败输出 → 修正 → 行为测试通过 → 最终 diff → 完成」；还覆盖完成门槛、权限审核、重复执行、超时/停止/重启、输出截断、分页上下文、冲突恢复、厂商协议和浏览器中的命令授权/完成记录导出，以及小红书模块回归。测试中的模型响应是确定性样本，文件与进程实际执行；它验证状态机和工具可靠性，不能当成真实模型的任务完成率。真实厂商能力、耗时和费用应使用自己的配置与真实任务持续评估。
-
-### GitHub 源码
-
-仓库：<https://github.com/1286053530/red-agent>。源码不包含个人账号会话、模型密钥、本机任务记录、依赖和打包文件；新机器运行 `npm ci` 后启动或构建。Windows 安装包需运行 `npm run dist:win` 生成。
+普通个人账号的私信、通知接入可行性与后续方案见 [账号接入重新评估](docs/ACCOUNT_INTEGRATION_ASSESSMENT.md)。

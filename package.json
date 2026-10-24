@@ -1,19 +1,19 @@
 {
   "name": "xiaozhu-shujin",
-  "version": "1.1.0",
+  "version": "2.1.0",
   "description": "筱竹书瑾 · 小红书内容与软件开发工作台",
   "author": "筱竹书瑾",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node server.mjs",
-    "start": "node server.mjs",
+    "postinstall": "node node_modules/electron/install.js",
+    "dev": "node scripts/python.mjs serve",
+    "start": "node scripts/python.mjs serve",
     "desktop": "electron .",
-    "dist:win": "electron-builder --win nsis portable --config.electronDist=node_modules/electron/dist",
-    "test": "node --test tests/*.test.mjs"
-  },
-  "dependencies": {
-    "playwright": "^1.64.1"
+    "build:backend": "node scripts/python.mjs build",
+    "dist:win": "npm run build:backend && electron-builder --win nsis portable --config.electronDist=node_modules/electron/dist",
+    "test": "node scripts/python.mjs test",
+    "test:desktop": "electron tests/desktop-python.mjs"
   },
   "devDependencies": {
     "electron": "^45.0.0",
@@ -27,15 +27,16 @@
       "output": "release"
     },
     "files": [
-      "*.html",
-      "*.css",
-      "*.js",
-      "*.mjs",
       "desktop/**",
+      "!desktop/**/test-*",
       "!tests/**",
       "!release/**",
       "!.local/**",
       "!test-results/**"
+    ],
+    "extraResources": [
+      {"from":"dist/python/shujin-backend","to":"backend","filter":["**/*"]},
+      {"from":".","to":"frontend","filter":["*.html","*.css","app.js","account.js","developer.js"]}
     ],
     "win": {
       "target": [
