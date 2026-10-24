@@ -2,6 +2,8 @@
 
 小红书内容工作台与软件开发 Agent，提供 Windows x64 桌面客户端。
 
+开发背景、需求演进、排错过程、验证证据与当前限制见 [开发记录](docs/DEVELOPMENT.md)。
+
 ## 桌面版
 
 - 安装版：`release/XiaozhuShujin-Setup-1.1.0-x64.exe`，可选择安装目录并创建桌面快捷方式。
