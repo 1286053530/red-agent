@@ -76,7 +76,9 @@ async def test_developer_ui_uses_python_backend_and_exports_logs(workspace, live
              ("propose_file", {"path": "app.mjs", "content": "export const add=(a,b)=>a+b;\n", "reason": "修复"}),
              ("run_command", {"command": "node", "args": ["--test", "app.test.mjs"], "purpose": "验证加法"}),
              ("review_diff", {}), ("finish_task", {"summary": "已修复加法", "evidence": "真实测试通过并复核变更"})]
+    release_model = asyncio.Event()
     async def handler(request):
+        await release_model.wait()
         name, args = steps.pop(0)
         return httpx.Response(200, json={"choices": [{"message": {"tool_calls": [tool_call(name, args)]}}]})
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as model, async_playwright() as playwright:
@@ -88,17 +90,27 @@ async def test_developer_ui_uses_python_backend_and_exports_logs(workspace, live
             page.on("pageerror", lambda error: errors.append(str(error)))
             await page.goto(origin + "/#developer")
             await page.evaluate("showView('developer')")
-            await page.select_option("#devProjectSelect", project["id"])
+            await page.locator(f'[data-project-id="{project["id"]}"]').click()
+            await page.locator("#devModelPicker summary").click()
             await page.select_option("#devModelSelect", provider["id"])
+            await page.locator("#devPrompt").click()
             assert await page.locator("#devSkillSelect").input_value() == "software-development"
             await page.fill("#devPrompt", "修复加法并测试")
             await page.click("#devSendButton")
+            running = page.locator(f'[data-session-id="{s["id"]}"] .dev-session-status.running')
+            await running.wait_for(state="visible")
+            assert await running.get_attribute("aria-label") == "执行中"
+            await page.locator('.activity-rail [data-view="account"]').click()
+            assert not await page.locator(".sidebar").is_visible()
+            await page.locator(f'.xhs-task-name[data-task-session-id="{s["id"]}"]').wait_for(state="visible")
+            release_model.set()
+            await page.locator('.activity-rail [data-view="developer"]').click()
             await page.locator('[data-change-action="apply"]').wait_for(timeout=15000)
             assert "a-b" in (Path(project["path"]) / "app.mjs").read_text()
             await page.click('[data-change-action="apply"]')
             await page.locator('[data-command-action="approve"]').wait_for(timeout=15000)
             await page.click('[data-command-action="approve"]')
-            await page.wait_for_function("document.querySelector('#devExecution').innerText.includes('已验证完成')", timeout=15000)
+            await page.wait_for_function("document.querySelector('#devExecution').innerText.includes('已完成')", timeout=15000)
             async with page.expect_download() as download:
                 await page.click("#devExportLogs")
             downloaded = await download.value
@@ -108,6 +120,29 @@ async def test_developer_ui_uses_python_backend_and_exports_logs(workspace, live
             assert report["entries"][-1]["type"] == "task_completed"
             assert report["task"]["skill"]["id"] == "software-development"
             assert "任务 Skill：软件开发" in await page.locator("#devExecution").inner_text()
+            assert await page.locator("#devTraceTabPanel #devExecution").count() == 1
+            assert not await page.locator(".dev-agent-panel #devExecution").count()
+            assert not await page.locator(".dev-session-status.running").count()
+            await page.click("#devFilesTab")
+            await page.locator('[data-file-path="app.mjs"]').click()
+            await page.wait_for_function("document.querySelector('#devFilePreview').textContent.includes('a+b')")
+            composer = await page.locator("#devPrompt").bounding_box()
+            assert composer["y"] + composer["height"] <= 1000
+            output = ROOT / ".local/theme-check"
+            output.mkdir(parents=True, exist_ok=True)
+            await page.screenshot(path=str(output / "conversation.png"))
+            await page.locator("#devModelPicker summary").click()
+            await page.click("#devManageModel")
+            assert await page.locator("#devSettingsModal").is_visible()
+            await page.screenshot(path=str(output / "settings.png"))
+            await page.click("#devCloseSettings")
+            await page.locator('.activity-rail [data-view="account"]').click()
+            completed_task = page.locator(f'.xhs-task-name[data-task-session-id="{s["id"]}"]')
+            await completed_task.wait_for(state="visible")
+            assert await page.locator('.xhs-task-group[aria-label="已完成"] .xhs-task-name').count() == 1
+            await completed_task.click()
+            await page.wait_for_function("document.body.dataset.view==='developer'")
             assert not errors
         finally:
+            release_model.set()
             await browser.close()

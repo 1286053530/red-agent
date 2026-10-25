@@ -11,7 +11,7 @@ from .browser import BrowserSession, DISABLED_MESSAGE, RETIRED_ACTIONS
 from .common import AppError
 from .workspace import Workspace
 
-PUBLIC_FILES = {"index.html", "styles.css", "desktop.css", "account.css", "app.js", "account.js", "developer.js", "developer.css"}
+PUBLIC_FILES = {"index.html", "styles.css", "desktop.css", "account.css", "app.js", "account.js", "developer.js", "developer.css", "agent-theme.css"}
 
 
 def create_app(assets, data_dir, desktop_token="", workspace=None, browser=None):

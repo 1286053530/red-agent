@@ -140,13 +140,10 @@ async def test_skill_catalog_api_and_frontend_controls(live_server):
             await page.evaluate("showView('developer')")
             await page.wait_for_function("document.querySelector('#devSkillSelect').options.length===2")
             assert await page.locator("#devSkillSelect").input_value() == "software-development"
-            await page.click("#devViewSkill")
-            await page.locator("#devSkillContent:not(.hidden)").wait_for()
-            assert (await page.locator("#devSkillContent").inner_text()).startswith("---")
-            await page.select_option("#devSkillSelect", "none")
-            assert await page.locator("#devViewSkill").is_disabled()
-            assert "基础工具" in await page.locator("#devSkillDescription").inner_text()
-            await page.select_option("#devSkillSelect", "software-development")
+            assert not await page.locator(".dev-agent-info").is_visible()
+            assert not await page.locator("#devSkillSelect").is_visible()
+            assert not await page.locator("#devViewSkill").is_visible()
+            assert not await page.locator("#devSkillDetails").is_visible()
             folder = ROOT / ".local/skill-check"
             folder.mkdir(parents=True, exist_ok=True)
             await page.screenshot(path=str(folder / "developer-skills.png"))

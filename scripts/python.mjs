@@ -11,6 +11,7 @@ const commands = {
     '--distpath','dist/python','--workpath','build/python','--specpath','build',
     '--exclude-module','playwright','--collect-submodules','uvicorn',
     '--add-data',join(root,'backend/tools.json')+ ';backend',
+    '--add-data',join(root,'backend/BASE.md')+ ';backend',
     '--add-data',join(root,'backend/skills')+';backend/skills',
     '--add-data',join(root,'backend/agent-test-reporter.mjs')+';backend','scripts/backend_entry.py']
 };

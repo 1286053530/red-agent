@@ -3,10 +3,27 @@
     "type": "function",
     "function": {
       "name": "list_files",
-      "description": "List project source file paths. Sensitive and generated files are excluded.",
+      "description": "List one project directory on demand; defaults to root only. Directories and files are returned as entries. Follow next_offset when hasMore. Optional recursive=true lists scoped descendant file paths in pages. Dependencies, build outputs, private paths and links are excluded.",
       "parameters": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Directory relative to project root; empty means root"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "recursive": {
+            "type": "boolean"
+          }
+        },
         "required": [],
         "additionalProperties": false
       }
@@ -44,13 +61,24 @@
     "type": "function",
     "function": {
       "name": "search_files",
-      "description": "Search a literal string in project source files. Returns matching lines.",
+      "description": "Search literal text in UTF-8 source including large files. Optional path scopes a file or directory. Results are bounded by matches, scanned characters and files; when hasMore, continue with next_file_offset as file_offset and next_offset as offset, keeping query/path unchanged. Check skipped files and report incomplete coverage.",
       "parameters": {
         "type": "object",
         "properties": {
           "query": {
             "type": "string",
             "description": "Literal text to find"
+          },
+          "path": {
+            "type": "string"
+          },
+          "file_offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
@@ -220,6 +248,55 @@
         },
         "required": [
           "summary",
+          "evidence"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "request_user",
+      "description": "Pause only when a concrete user answer or choice is required. State the specific question, why existing tools cannot resolve it, and optional completed work. This is waiting for user, never completion.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "question",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "fail_task",
+      "description": "Report that the task could not be completed after reasonable recovery. Preserve concrete evidence and explain the failure or unsupported verification. Never claim success. Use request_user only if a specific user answer can unblock work.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
           "evidence"
         ],
         "additionalProperties": false

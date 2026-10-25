@@ -1,7 +1,7 @@
 {
   "name": "xiaozhu-shujin",
-  "version": "2.1.0",
-  "description": "筱竹书瑾 · 小红书内容与软件开发工作台",
+  "version": "2.1.19",
+  "description": "筱竹书瑾 · Agent 开发工作台",
   "author": "筱竹书瑾",
   "private": true,
   "type": "module",

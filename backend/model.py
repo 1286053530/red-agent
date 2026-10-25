@@ -11,7 +11,7 @@ TOOLS = json.loads(Path(__file__).with_name("tools.json").read_text(encoding="ut
 # Character pagination bounds each result even for minified, single-line files.
 read_properties = TOOLS[1]["function"]["parameters"]["properties"]
 read_properties.update(offset={"type": "integer", "minimum": 0}, max_chars={"type": "integer", "minimum": 1, "maximum": 12000})
-TOOLS[1]["function"]["description"] = "Read UTF-8 source. Results are capped at 12000 characters. Follow next_offset using offset until hasMore is false before replacing an existing file. Optional start_line/end_line select a line range."
+TOOLS[1]["function"]["description"] = "Read UTF-8 source of any size in bounded pages (12000 characters). Follow next_offset using offset to continue. Optional start_line/end_line select at most 400 lines. For inspection read relevant ranges and report coverage; only full-file replacement requires reading all pages. Never treat a partial page as the full file."
 TOOLS.append({"type": "function", "function": {"name": "read_skill_resource", "description": "Read an allowlisted reference from the active bundled Skill. Paths come from SKILL.md. Instructions are pinned to this task; this does not read project files or grant new commands.",
     "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}}})
 

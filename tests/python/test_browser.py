@@ -130,10 +130,13 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
         browser = await playwright.chromium.launch(channel="msedge", headless=True)
         try:
             page = await browser.new_page()
-            await page.add_init_script("""window.manualCalls={open:0,close:0,external:0};let viewChanged;
+            await page.add_init_script("""window.manualCalls={open:0,close:0,external:0,hide:0,resume:0};let viewChanged;
             window.shujinDesktop={onOfficial:callback=>{viewChanged=callback;},
-              openOfficial:async()=>{manualCalls.open++;viewChanged({visible:true,error:''});},
-              closeOfficial:async()=>{manualCalls.close++;viewChanged({visible:false,error:''});},
+              openOfficial:async bounds=>{manualCalls.open++;window.openedBounds=bounds;viewChanged({visible:true,retained:true,error:''});},
+              resizeOfficial:async()=>{},
+              hideOfficial:async()=>{manualCalls.hide++;viewChanged({visible:false,retained:true,error:''});},
+              resumeOfficial:async()=>{manualCalls.resume++;viewChanged({visible:true,retained:true,error:''});},
+              closeOfficial:async()=>{manualCalls.close++;viewChanged({visible:false,retained:false,error:''});},
               openExternal:async()=>{manualCalls.external++;viewChanged({visible:false,error:''});}};""")
             requests = []
             page.on("request", lambda request: requests.append(request.url))
@@ -141,12 +144,29 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
             await page.evaluate("showView('account')")
             await page.locator("#accountView [data-open-xhs]").click()
             assert await page.locator(".manual-official").is_visible()
+            assert not await page.locator(".sidebar").is_visible()
+            assert await page.locator("#xhsTaskStrip").is_visible()
+            assert await page.evaluate("openedBounds.x > document.querySelector('.activity-rail').getBoundingClientRect().right")
             await page.click("#manualOfficialBack")
             assert not await page.locator(".manual-official").is_visible()
             await page.locator("#accountView [data-open-xhs]").click()
-            await page.click("#manualOfficialExternal")
+            assert await page.locator("#manualOfficialExternal").count() == 0
+            await page.keyboard.press("Escape")
             assert not await page.locator(".manual-official").is_visible()
-            assert await page.evaluate("manualCalls") == {"open": 2, "close": 1, "external": 1}
+            assert await page.evaluate("manualCalls") == {"open": 2, "close": 2, "external": 0, "hide": 0, "resume": 0}
+            await page.locator("#accountView [data-open-xhs]").click()
+            await page.locator('.activity-rail [data-view="developer"]').click()
+            assert not await page.locator(".manual-official").is_visible()
+            assert await page.evaluate("manualCalls.close") == 2
+            assert await page.evaluate("manualCalls.hide") == 1
+            await page.locator('.activity-rail [data-view="account"]').click()
+            assert await page.locator(".manual-official").is_visible()
+            assert await page.evaluate("manualCalls.open") == 3
+            assert await page.evaluate("manualCalls.resume") == 1
+            await page.click("#manualOfficialBack")
+            await page.locator('.activity-rail [data-view="developer"]').click()
+            await page.locator('.activity-rail [data-view="account"]').click()
+            assert not await page.locator(".manual-official").is_visible()
             assert not [url for url in requests if "/api/xhs/" in url or "xiaohongshu.com" in url]
         finally:
             await browser.close()

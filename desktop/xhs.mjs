@@ -1,4 +1,4 @@
-import { session, shell, WebContentsView } from 'electron';
+import { session, WebContentsView } from 'electron';
 
 const HOME = 'https://www.xiaohongshu.com/explore';
 const DISABLED = '自动化访问已停用，请在官方页面中手动操作。';
@@ -13,31 +13,61 @@ export function officialUrl(value) {
 
 // A manual browser surface only: no DOM access, login checks or content tools.
 export class DesktopXhs {
-  constructor(win, { partition = 'persist:xiaozhu-manual-v1', openExternal = url => shell.openExternal(url) } = {}) {
+  constructor(win, { partition = 'persist:xiaozhu-manual-v1' } = {}) {
     this.win = win;
     this.partition = partition;
-    this.openExternal = openExternal;
     this.view = null;
     this.visible = false;
+    this.requestedVisible = false;
     this.error = '';
     this.clearing = false;
+    this.bounds = null;
     const profile = session.fromPartition(partition);
-    // Deny background traffic, including any worker left by a previously open page.
-    profile.webRequest.onBeforeRequest((details,callback)=>callback({cancel:!this.view || !this.visible || this.win?.isMinimized()===true}));
+    // An explicitly opened page may keep its normal connections while retained.
+    // Closing it still blocks all subsequent partition traffic, including workers.
+    profile.webRequest.onBeforeRequest((details,callback)=>callback({cancel:!this.view}));
     profile.setPermissionRequestHandler((_contents,_permission,callback)=>callback(false));
     profile.setPermissionCheckHandler(()=>false);
     profile.on('will-download',event=>event.preventDefault());
     win?.on('resize',()=>this.resize());
-    win?.on('minimize',()=>void this.close());
-    win?.on('hide',()=>void this.close());
+    win?.on('minimize',()=>this.suspend());
+    win?.on('hide',()=>this.suspend());
+    win?.on('restore',()=>{if(this.requestedVisible)this.show();});
+    win?.on('show',()=>{if(this.requestedVisible)this.show();});
   }
   resize() {
-    if(!this.view || !this.win || this.win.isDestroyed())return;
+    if(!this.view || !this.bounds || !this.win || this.win.isDestroyed())return;
     const [width,height]=this.win.getContentSize();
-    this.view.setBounds({x:0,y:104,width:Math.max(1,width),height:Math.max(1,height-104)});
+    const x=Math.min(Math.max(0,this.bounds.x),Math.max(0,width-1));
+    const y=Math.min(Math.max(0,this.bounds.y),Math.max(0,height-1));
+    this.view.setBounds({x,y,width:Math.max(1,Math.min(this.bounds.width,width-x)),height:Math.max(1,Math.min(this.bounds.height,height-y))});
+  }
+  setBounds(bounds) {
+    if(!bounds || !['x','y','width','height'].every(key=>Number.isFinite(bounds[key])) || bounds.width<1 || bounds.height<1)
+      throw new AccountError('官网显示区域无效。',400);
+    this.bounds=Object.fromEntries(['x','y','width','height'].map(key=>[key,Math.round(bounds[key])]));
+    this.resize();
+    return {updated:true};
   }
   notify() {
-    if(this.win&&!this.win.isDestroyed())this.win.webContents.send('xhs:view',{visible:this.visible,error:this.error,url:this.view?.webContents.getURL()||HOME});
+    if(this.win&&!this.win.isDestroyed())this.win.webContents.send('xhs:view',{visible:this.visible,retained:!!this.view&&!this.view.webContents.isDestroyed(),error:this.error,url:this.view?.webContents.getURL()||HOME});
+  }
+  show() {
+    if(!this.view||this.view.webContents.isDestroyed())return {opened:false,retained:false};
+    this.requestedVisible=true;
+    this.visible=!this.win.isMinimized();
+    this.view.setVisible(this.visible);
+    this.resize();this.notify();
+    return {opened:true,retained:true,mode:'manual_embedded'};
+  }
+  hide() {
+    this.requestedVisible=false;this.visible=false;
+    if(this.view&&!this.view.webContents.isDestroyed())this.view.setVisible(false);
+    this.notify();return {retained:!!this.view};
+  }
+  suspend() {
+    const requested=this.requestedVisible;
+    this.hide();this.requestedVisible=requested;
   }
   async status() {
     return { status:'automation_disabled', automationEnabled:false, manualOnly:true, name:'', accountId:'', busy:false,
@@ -48,27 +78,36 @@ export class DesktopXhs {
     if(this.closing)await this.closing;
     if(this.clearing)throw new AccountError('正在清理本软件登录数据，请稍后再打开。',409);
     if(!this.win||this.win.isDestroyed())throw new AccountError('工作台窗口不可用。',409);
-    if(this.view&&!this.view.webContents.isDestroyed())return {opened:true,mode:'manual_embedded'};
+    if(!this.bounds)throw new AccountError('请先指定官网的内嵌显示区域。',400);
+    if(this.view&&!this.view.webContents.isDestroyed())return this.show();
     const view=new WebContentsView({webPreferences:{partition:this.partition,nodeIntegration:false,contextIsolation:true,sandbox:true}});
-    this.view=view;this.visible=true;this.error='';
+    this.view=view;this.visible=true;this.requestedVisible=true;this.error='';
     const wc=view.webContents;
-    wc.setWindowOpenHandler(()=>{this.error='此链接需要新窗口，请按需使用系统浏览器。';this.notify();return {action:'deny'};});
-    const restrict=(event,target)=>{if(!officialUrl(target)){event.preventDefault();this.error='此页面需要站外跳转，请按需使用系统浏览器。';this.notify();}};
+    wc.setWindowOpenHandler(({url})=>{
+      if(!this.visible)return {action:'deny'};
+      if(!officialUrl(url)){this.error='已阻止站外链接，仅支持在内嵌页访问小红书官网。';this.notify();return {action:'deny'};}
+      // Reuse the existing isolated page, including links with target="_blank".
+      setImmediate(()=>{
+        if(this.view!==view||wc.isDestroyed())return;
+        this.error='';this.notify();
+        void wc.loadURL(url).catch(()=>{
+          if(this.view!==view||wc.isDestroyed())return;
+          this.error='链接未能加载，请在内嵌官网中手动重试。';this.notify();
+        });
+      });
+      return {action:'deny'};
+    });
+    const restrict=(event,target)=>{if(!officialUrl(target)){event.preventDefault();this.error='已阻止站外跳转，仅支持在内嵌页访问小红书官网。';this.notify();}};
     wc.on('will-navigate',restrict);wc.on('will-redirect',restrict);
     wc.on('did-navigate',()=>this.notify());
     this.win.contentView.addChildView(view);this.resize();this.notify();
     try {await wc.loadURL(HOME);}
     catch(error){
       if(this.view!==view)return {opened:false,closed:true};
-      this.error='官网未能加载。请返回工作台，或手动使用系统浏览器；不会自动重试。';
+      this.error='官网未能加载。请返回工作台后手动重试；不会自动重试。';
       this.notify();throw new AccountError(this.error,502);
     }
     return {opened:true,mode:'manual_embedded'};
-  }
-  async openInBrowser() {
-    await this.close();
-    await this.openExternal(HOME);
-    return {opened:true,mode:'external'};
   }
   async connect() { throw new AccountError(DISABLED); }
   async recommendations() { throw new AccountError(DISABLED); }
@@ -88,7 +127,7 @@ export class DesktopXhs {
   async close() {
     const view=this.view;
     if(!view){if(this.closing)await this.closing;return;}
-    this.view=null;this.visible=false;this.error='';
+    this.view=null;this.visible=false;this.requestedVisible=false;this.error='';
     if(view&&!view.webContents.isDestroyed()){
       view.webContents.stop();
       if(this.win&&!this.win.isDestroyed())this.win.contentView.removeChildView(view);

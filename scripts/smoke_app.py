@@ -17,8 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", action="store_true")
+    parser.add_argument("--app-dir", type=Path, default=ROOT / "release/win-unpacked")
     args = parser.parse_args()
-    executable = ROOT / ("node_modules/electron/dist/electron.exe" if args.source else "release/win-unpacked/筱竹书瑾.exe")
+    executable = ROOT / "node_modules/electron/dist/electron.exe" if args.source else args.app_dir.resolve() / "筱竹书瑾.exe"
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
@@ -57,8 +58,18 @@ async def main():
                     await asyncio.sleep(0.2)
                 assert page is not None, "Workbench page did not load"
                 await page.wait_for_selector("#devImportButton", state="attached")
+                assert await page.evaluate("document.body.dataset.view") == "developer"
+                assert not await page.locator(".topbar").is_visible()
+                assert await page.locator(".dev-agent-heading #devToggleSidebar").is_visible()
+                assert await page.locator("#devComposer #devModelPicker").is_visible()
+                assert await page.locator("#devComposer #devAccessPicker").is_visible()
+                assert not await page.locator("#devModelSelect").is_visible()
+                await page.click("#devTraceTab")
+                assert await page.locator("#devTraceTabPanel #devExecution").is_visible()
+                await page.click("#devFilesTab")
+                assert await page.locator("#devFilesTabPanel").is_visible()
                 bridge = await page.evaluate("({version:window.shujinDesktop.version,node:typeof require})")
-                assert bridge == {"version": "2.1.0", "node": "undefined"}
+                assert bridge == {"version": "2.1.19", "node": "undefined"}
                 official_requests, automation_requests = [], []
                 def observed(request):
                     if "xiaohongshu.com" in request.url or "xhscdn.com" in request.url:
@@ -81,16 +92,26 @@ async def main():
                 await page.evaluate("showView('developer')")
                 await page.locator("#devImportButton").wait_for(state="visible")
                 await page.wait_for_function("document.querySelector('#devSkillSelect').value==='software-development'")
-                await page.click("#devViewSkill")
-                await page.locator("#devSkillContent:not(.hidden)").wait_for()
-                skill_content = await page.locator("#devSkillContent").inner_text()
+                assert not await page.locator("#devSkillSelect").is_visible()
+                assert not await page.locator("#devSkillDetails").is_visible()
+                skill_content = await page.evaluate("fetch('/api/dev/skills/software-development').then(r=>r.json()).then(s=>s.content)")
                 assert skill_content.startswith("---") and "read_skill_resource" in skill_content
+                fixture = folder / "large-project"
+                (fixture / "src").mkdir(parents=True)
+                (fixture / "node_modules").mkdir()
+                text = "中文🙂" * 100000 + "TAIL"
+                (fixture / "src" / "large.txt").write_bytes(text.encode("utf-8"))
+                project = await page.evaluate("path=>fetch('/api/dev/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})}).then(r=>r.json())", str(fixture))
+                listing = await page.evaluate("id=>fetch('/api/dev/projects/'+id+'/files').then(r=>r.json())", project["id"])
+                assert [entry["path"] for entry in listing["entries"]] == ["src"]
+                chunk = await page.evaluate("args=>fetch('/api/dev/projects/'+args.id+'/file?path=src%2Flarge.txt&offset='+args.offset).then(r=>r.json())", {"id": project["id"], "offset": len(text) - 4})
+                assert chunk["content"] == "TAIL" and not chunk["hasMore"] and chunk["total_chars"] == len(text)
                 await page.evaluate("window.close()")
                 code = await asyncio.to_thread(process.wait, 15)
                 assert code == 0, code
                 report = {"passed": True, "mode": "source" if args.source else "packaged", "bridge": bridge,
                           "pythonApi": state["status"], "anonymousApi": 403, "shutdownCode": code,
-                          "manualOnly": True, "officialRequests": len(official_requests), "automaticApiRequests": len(automation_requests), "builtinSkill": "software-development"}
+                          "manualOnly": True, "officialRequests": len(official_requests), "automaticApiRequests": len(automation_requests), "builtinSkill": "software-development", "largeSourcePaging": True}
                 (output / ("app-source.json" if args.source else "app-packaged.json")).write_text(json.dumps(report, indent=2), encoding="utf-8")
                 print(json.dumps(report))
             finally:

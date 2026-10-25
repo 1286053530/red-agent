@@ -32,7 +32,7 @@ const findPost = id => posts.find(post => post.id===id);
 let tasks=readJson('guanshu_tasks',defaults);
 let saved=readJson('guanshu_saved',[]);
 let selectedPostId='p1';
-let activeView='radar';
+let activeView='developer';
 let activeTab='focus';
 let activeCategory='全部';
 let searchQuery='';
@@ -98,13 +98,13 @@ function renderTasks(){
     '<span class="task-status">'+(task.active?'监测中':'已暂停')+'</span>',
     '<button class="task-toggle" data-toggle-task="'+task.id+'">'+(task.active?'暂停':'启用')+'</button></div>'
   ].join('')).join(''):'<div class="empty-state">'+icon('target')+'<h3>还没有监测任务</h3><p>新建一个主题，开始整理你关心的内容方向。</p><button class="primary-button" data-open-task>'+icon('plus')+'新建任务</button></div>';
-  $('#taskNavCount').textContent=tasks.length;
+  const taskCounter=$('#taskNavCount');if(taskCounter)taskCounter.textContent=tasks.length;
   $('#activeTaskMetric').innerHTML=tasks.filter(task=>task.active).length+' <span class="metric-unit">个任务</span>';
   $('#taskCountBadge').textContent=tasks.length+' 个任务';
 }
 function renderSaved(){
   const list=saved.map(findPost).filter(Boolean);
-  $('#savedNavCount').textContent=list.length;
+  const savedCounter=$('#savedNavCount');if(savedCounter)savedCounter.textContent=list.length;
   $('#savedCountBadge').textContent=list.length+' 篇内容';
   $('#savedGrid').innerHTML=list.length?list.map(postCard).join(''):'<div class="empty-state">'+icon('bookmark')+'<h3>收藏夹还是空的</h3><p>在内容卡片右上角点选书签，随手收集值得研究的灵感。</p><button class="secondary-button" data-go-radar>浏览内容发现</button></div>';
 }
@@ -123,12 +123,13 @@ function renderReport(){
   ].join('');
 }
 function showView(view){
-  if(!['developer','radar','account','recommendations','messages','tasks','saved','report'].includes(view))view='account';
+  if(!['developer','radar','account','recommendations','messages','tasks','saved','report'].includes(view))view='developer';
   activeView=view;
   document.body.dataset.view=view;
   $('.environment-tag').innerHTML='<span></span> '+(view==='developer'?'本地开发':'演示环境');
   $$('.workspace-view').forEach(section=>section.classList.toggle('hidden',section.id!==view+'View'));
   $$('.nav-item').forEach(button=>{button.classList.toggle('active',button.dataset.view===view);button.setAttribute('aria-label',button.querySelector('span')?.textContent||'导航');});
+  $$('.activity-button').forEach(button=>{const selected=button.dataset.view===(view==='developer'?'developer':'account');button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});
   $('#breadcrumbCurrent').textContent={developer:'开发 Agent',radar:'内容雷达',account:'小红书账号',recommendations:'我的推荐',messages:'消息中心',tasks:'监测任务',saved:'收藏夹',report:'策略简报'}[view];
   if(view==='tasks')renderTasks();if(view==='saved')renderSaved();if(view==='report')renderReport();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -198,4 +199,4 @@ $('#notificationButton').addEventListener('click',()=>showView('messages'));
 window.addEventListener('hashchange',()=>showView(location.hash.slice(1)));
 
 setDate();renderPosts();renderTasks();renderSaved();
-showView(location.hash.slice(1)||'account');
+showView(location.hash.slice(1)||'developer');

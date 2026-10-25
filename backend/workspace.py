@@ -15,11 +15,13 @@ from .common import AppError, digest, dumps, now, uid
 from .model import call_model
 from .runtime import bounded_history, run_process, validate_command
 from .skill_catalog import SkillCatalog, DEFAULT_SKILL, task_skill_context
+from .source_reader import source_page, search_source
+from .reliability import ProgressGuard
 
-IGNORED = {"node_modules", ".git", ".local", ".next", "dist", "build", "release", "coverage", "test-results", "vendor", ".venv", "__pycache__", ".pytest_cache"}
+IGNORED = {"node_modules", ".git", ".local", ".next", "dist", "build", "release", "coverage", "test-results", "vendor", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", ".nox", ".cache", ".nuxt", ".output", ".gradle", "target", "bower_components", "site-packages"}
 PRIVATE = re.compile(r"^\.env(?:\.|$)|^(?:\.ssh|\.aws|\.azure|\.npmrc|\.netrc|credentials|secrets?)(?:\.|$)|\.(?:pem|p12|pfx|key)$", re.I)
 ACTIVE_COMMANDS = {"running", "queued", "pending_approval"}
-SYSTEM = """You are a single software agent in a local source project. Built-in executable checks currently support JavaScript/Node only. Respond in Chinese.
+SYSTEM = Path(__file__).with_name("BASE.md").read_text(encoding="utf-8") + "\n\n" + """You are a single software agent in a local source project. Built-in executable checks currently support JavaScript/Node only. Respond in Chinese.
 Understand the user goal and acceptance, update_plan, search/read relevant source, act, verify actual results,
 correct failures, review_diff, then finish_task with observable evidence. Read all character pages of existing
 files before replacement: follow next_offset with offset while hasMore. A file is not read until all pages
@@ -33,6 +35,21 @@ If blocked explain missing input and evidence. Keep concise factual checkpoints,
 
 def excluded(name):
     return name.lower() in IGNORED or PRIVATE.search(name) is not None
+
+
+def page_query(query):
+    try:
+        return {key: int(query[key]) for key in ("offset", "limit", "start_line", "end_line", "max_chars") if key in query}
+    except (TypeError, ValueError) as exc:
+        raise AppError("分页参数须为整数。") from exc
+
+
+def task_kind(message, requested=None):
+    if requested in ("inspect", "change"):
+        return requested
+    review = re.search(r"审查|审阅|评审|分析|梳理|阅读|查看|检查|\b(?:review|inspect|analy[sz]e|explain)\b", message, re.I)
+    change = re.search(r"修复|修改|改成|改为|新增|添加|重构|删除|(?:并|然后|接着|帮我)(?:实现|开发)|\b(?:fix|implement|refactor|add|delete)\b", message, re.I)
+    return "inspect" if review and not change else "change"
 
 
 def atomic_write(path, content, mode=0o600):
@@ -70,6 +87,10 @@ class Workspace:
         state = self.data_dir / "workspace.json"
         self.data = json.loads(state.read_text(encoding="utf-8")) if state.exists() else {"projects": [], "providers": [], "sessions": []}
         for session in self.data["sessions"]:
+            if session["status"] == "needs_help":
+                session["status"] = "failed"
+                if session.get("task"):
+                    session["task"]["outcome"] = {"status": "failed", "code": "legacy_interruption", "reason": session.get("error") or "旧任务未完成，可查看记录后重试。", "retryable": True, "at": now()}
             for key, default in [("events", []), ("commands", []), ("observations", {})]:
                 session.setdefault(key, default)
             for change in session["changes"]:
@@ -157,7 +178,7 @@ class Workspace:
 
     def state(self):
         return {"skills": self.skills.list(), "projects": copy.deepcopy(self.data["projects"]), "providers": [self.public_provider(p) for p in self.data["providers"]],
-                "sessions": [{k: s[k] for k in ["id", "projectId", "title", "status", "updatedAt", "providerId"]} for s in self.data["sessions"]]}
+                "sessions": [{**{k: s[k] for k in ["id", "projectId", "title", "status", "updatedAt", "providerId"]}, "archivedAt": s.get("archivedAt")} for s in self.data["sessions"]]}
 
     def import_project(self, path):
         if not isinstance(path, str) or not Path(path).is_absolute():
@@ -201,6 +222,17 @@ class Workspace:
         self.save()
         return self.public_session(session)
 
+    def archive_session(self, session_id, archived):
+        session = self.session(session_id)
+        if archived and (session_id in self.runs or session["status"] == "running" or self.pending(session)
+                         or any(command["status"] in ACTIVE_COMMANDS for command in session["commands"])):
+            raise AppError("会话仍在运行或有待审核事项，请先停止任务并处理审核后再归档。", 409)
+        session["archivedAt"] = (session.get("archivedAt") or now()) if archived else None
+        session["updatedAt"] = now()
+        self.record(session, "session_archived" if archived else "session_restored")
+        self.save()
+        return self.public_session(session)
+
     def safe_path(self, project, path):
         if not isinstance(path, str) or not path or Path(path).is_absolute() or PureWindowsPath(path).is_absolute() or re.search(r'[\x00-\x1f:*?"<>|]', path):
             raise AppError("请使用项目内的相对文件路径。")
@@ -219,37 +251,93 @@ class Workspace:
             raise AppError("禁止访问项目外的文件。")
         return candidate
 
-    def files(self, project, strict=False):
-        self.safe_path(project, "README.md")
-        output, visited, limited = [], 0, False
+    def directory_entries(self, project, path=""):
+        root = self.safe_path(project, path) if path else self.safe_path(project, "README.md").parent
+        if not root.is_dir():
+            raise AppError("请选择项目内的目录。")
+        output = []
+        with os.scandir(root) as entries:
+            for entry in entries:
+                if excluded(entry.name) or entry.is_symlink():
+                    continue
+                if getattr(entry.stat(follow_symlinks=False), "st_file_attributes", 0) & 0x400:
+                    continue
+                folder = entry.is_dir(follow_symlinks=False)
+                if folder or entry.is_file(follow_symlinks=False):
+                    output.append({"path": ((path + "/") if path else "") + entry.name,
+                                   "name": entry.name, "type": "directory" if folder else "file"})
+        return sorted(output, key=lambda e: (e["type"] != "directory", e["name"].casefold(), e["name"]))
 
-        def walk(folder, depth=0):
-            nonlocal visited, limited
-            if depth > 10:
-                limited = True
-                return
-            with os.scandir(folder) as entries:
-                for entry in entries:
-                    visited += 1
-                    if visited > 6000 or len(output) >= 1200:
-                        limited = True
-                        return
-                    reparse = getattr(entry.stat(follow_symlinks=False), "st_file_attributes", 0) & 0x400
-                    if excluded(entry.name) or entry.is_symlink() or reparse:
-                        continue
-                    if entry.is_dir(follow_symlinks=False):
-                        walk(Path(entry.path), depth + 1)
-                    elif entry.is_file(follow_symlinks=False):
-                        output.append(Path(entry.path).relative_to(project["path"]).as_posix())
-        walk(Path(project["path"]))
-        if strict and limited:
-            raise AppError("源码范围超过 1200 文件 / 6000 条目 / 10 层，请选择更小的项目。")
-        return sorted(output)
+    def iter_files(self, project, path=""):
+        # Explicit stack avoids recursion/depth limits; children are scanned only when reached.
+        stack = [iter(self.directory_entries(project, path))]
+        while stack:
+            entry = next(stack[-1], None)
+            if entry is None:
+                stack.pop()
+            elif entry["type"] == "directory":
+                stack.append(iter(self.directory_entries(project, entry["path"])))
+            else:
+                yield entry["path"]
+
+    def files(self, project, strict=False):
+        return sorted(self.iter_files(project))
+
+    def list_page(self, project, args):
+        from itertools import islice
+        path = args.get("path", "").replace("\\", "/")
+        offset, limit = args.get("offset", 0), args.get("limit", 200)
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 500:
+            raise AppError("目录分页范围无效，每页最多 500 项。")
+        recursive = args.get("recursive", False)
+        if type(recursive) is not bool:
+            raise AppError("recursive 必须为布尔值。")
+        if recursive:
+            entries = [{"path": p, "name": p.rsplit("/", 1)[-1], "type": "file"}
+                       for p in islice(self.iter_files(project, path), offset, offset + limit + 1)]
+        else:
+            entries = self.directory_entries(project, path)[offset:offset + limit + 1]
+        more = len(entries) > limit
+        entries = entries[:limit]
+        return {"path": path, "entries": entries, "files": [e["path"] for e in entries if e["type"] == "file"],
+                "offset": offset, "next_offset": offset + len(entries), "hasMore": more, "limit": limit,
+                "recursive": recursive, "excluded_directories": sorted(IGNORED)}
+
+    def search_page(self, project, args):
+        from itertools import islice
+        query = args.get("query")
+        if not isinstance(query, str) or not query.strip() or len(query) > 2000:
+            raise AppError("搜索文本须为 1 至 2000 字符。")
+        scope = args.get("path", "").replace("\\", "/")
+        file_offset, offset = args.get("file_offset", 0), args.get("offset", 0)
+        if type(file_offset) is not int or file_offset < 0 or type(offset) is not int or offset < 0:
+            raise AppError("搜索分页范围无效。")
+        paths = [scope] if scope and self.safe_path(project, scope).is_file() else self.iter_files(project, scope)
+        matches, skipped, budget = [], [], 2_000_000
+        index = file_offset
+        for path in islice(paths, file_offset, None):
+            try:
+                found, next_offset, scanned = search_source(self.safe_path(project, path), query, offset, budget, 60 - len(matches))
+                matches.extend({"path": path, **item} for item in found)
+                budget -= scanned
+            except (UnicodeError, AppError, OSError) as exc:
+                skipped.append({"path": path, "reason": str(exc)[:150]})
+                next_offset = None
+            index += 1
+            if next_offset is not None:
+                return {"matches": matches, "limited": True, "hasMore": True, "skipped": skipped,
+                        "next_file_offset": index - 1, "next_offset": next_offset}
+            offset = 0
+            if budget <= 0 or index - file_offset >= 200:
+                return {"matches": matches, "limited": True, "hasMore": True, "skipped": skipped,
+                        "next_file_offset": index, "next_offset": 0}
+        return {"matches": matches, "limited": False, "hasMore": False, "skipped": skipped,
+                "next_file_offset": index, "next_offset": 0}
 
     def read_source(self, project, path):
         target = self.safe_path(project, path)
         if target.stat().st_size > 160000:
-            raise AppError("文件超过 160 KB，请选择较小的源码文件。")
+            raise AppError("整文件替换目前限 160 KB；大文件可用 read_file 分页审查。")
         try:
             text = target.read_bytes().decode("utf-8")
         except UnicodeDecodeError as exc:
@@ -263,9 +351,11 @@ class Workspace:
         result = hashlib.sha256()
         for path in self.files(project, strict=True):
             target = self.safe_path(project, path)
-            if target.stat().st_size > 20000000:
-                raise AppError("源码文件超过快照上限 20 MB，请选择更小的项目。")
-            result.update((path + "\0" + digest(target.read_bytes()) + "\0").encode("utf-8"))
+            checksum = hashlib.sha256()
+            with target.open("rb") as stream:
+                while chunk := stream.read(65536):
+                    checksum.update(chunk)
+            result.update((path + "\0" + checksum.hexdigest() + "\0").encode("utf-8"))
         return result.hexdigest()
 
     def write_change(self, session, change):
@@ -324,45 +414,34 @@ class Workspace:
         if stop and stop.is_set():
             raise AppError("任务已停止。")
         if name == "list_files":
-            return {"files": self.files(project), "limit": 1200}
+            return await asyncio.to_thread(self.list_page, project, args)
         if name == "read_file":
             path = args["path"].replace("\\", "/")
-            content = self.read_source(project, path)
-            start, end = args.get("start_line", 1), args.get("end_line", args.get("start_line", 1) + 199)
-            if type(start) is not int or type(end) is not int or start < 1 or end < start or end - start >= 400:
-                raise AppError("每次读取 1 至 400 行。")
-            lines = content.splitlines(keepends=True)
-            # Character offsets are absolute, so even one long line is safely pageable.
-            offset = args.get("offset", sum(len(line) for line in lines[:start - 1]))
-            cap = args.get("max_chars", 12000)
-            if type(offset) is not int or offset < 0 or offset > len(content) or type(cap) is not int or not 1 <= cap <= 12000:
-                raise AppError("无效的字符分页范围。")
-            limit = len(content) if "offset" in args else sum(len(line) for line in lines[:end])
-            next_offset = min(len(content), limit, offset + cap)
+            page = await asyncio.to_thread(source_page, self.safe_path(project, path), args)
             previous = session["observations"].get(path, {})
-            ranges = previous.get("ranges", []) if previous.get("digest") == digest(content) and previous.get("unit") == "chars" else []
-            ranges.append([offset, next_offset])
-            session["observations"][path] = {"digest": digest(content), "unit": "chars", "ranges": ranges, "length": len(content)}
-            return {"path": path, "content": content[offset:next_offset], "offset": offset, "next_offset": next_offset,
-                    "total_chars": len(content), "total_lines": len(content.split("\n")), "hasMore": next_offset < len(content)}
+            ranges = previous.get("ranges", []) if previous.get("digest") == page["digest"] and previous.get("unit") == "chars" else []
+            merged = []
+            for begin, end in sorted([*ranges, [page["offset"], page["next_offset"]]]):
+                if merged and begin <= merged[-1][1]:
+                    merged[-1][1] = max(merged[-1][1], end)
+                else:
+                    merged.append([begin, end])
+            session["observations"][path] = {"digest": page["digest"], "unit": "chars", "ranges": merged, "length": page["total_chars"]}
+            return {"path": path, **page}
         if name == "search_files":
-            query = args.get("query")
-            if not isinstance(query, str) or not query.strip():
-                raise AppError("搜索文本不能为空。")
-            matches = []
-            for path in self.files(project):
-                try:
-                    text = self.read_source(project, path)
-                except (AppError, OSError):
-                    continue
-                for index, line in enumerate(text.split("\n"), 1):
-                    if query in line:
-                        matches.append({"path": path, "line": index, "text": line[:500]})
-                    if len(matches) >= 60:
-                        return {"matches": matches, "limited": True}
-            return {"matches": matches, "limited": False}
+            return await asyncio.to_thread(self.search_page, project, args)
         if not task:
             raise AppError("请先开始任务。")
+        if name in {"request_user", "fail_task"}:
+            if self.pending(session) or any(c["status"] in ACTIVE_COMMANDS for c in session["commands"]):
+                raise AppError("请先处理已有审核或运行中的命令，不能隐藏未处理事项。")
+            required = ["question", "reason"] if name == "request_user" else ["reason", "evidence"]
+            if any(not isinstance(args.get(key), str) or not args[key].strip() for key in required):
+                raise AppError("请提供具体问题与原因，或失败原因与已检查的证据。")
+            if name == "request_user":
+                task["metrics"]["interventions"] += 1
+                return self.end_attempt(session, "awaiting_user", "user_input", args["reason"], question=args["question"], summary=str(args.get("summary", "")))
+            return self.end_attempt(session, "failed", "reported_failure", args["reason"], evidence=args["evidence"])
         if name == "read_skill_resource":
             snapshot = task.get("_skillSnapshot")
             path = args.get("path")
@@ -481,9 +560,25 @@ class Workspace:
                 task["verification"] = {"commandId": check["id"], "fingerprint": fingerprint, "exitCode": check["exitCode"]}
             session["status"] = "completed"
             task.update(phase="complete", finishedAt=now(), result={"summary": args["summary"][:4000], "evidence": args["evidence"][:4000]})
+            task["outcome"] = {"status": "completed", "code": "static_review" if task["kind"] == "inspect" else "verified", "reason": args["summary"][:4000], "at": now()}
             session["messages"].append({"role": "assistant", "content": task["result"]["summary"] + "\n\n验证依据：" + task["result"]["evidence"]})
             return {"status": "completed", "result": task["result"]}
         raise AppError("不支持的工具：" + str(name)[:60])
+
+    def end_attempt(self, session, status, code, reason, **details):
+        task = session["task"]
+        outcome = {"status": status, "code": code, "reason": str(reason)[:2000], "retryable": status == "failed", "at": now(),
+                   **{key: str(value)[:4000] for key, value in details.items()}}
+        session.update(status=status, error=outcome["reason"] if status == "failed" else "")
+        task.update(outcome=outcome, phase=status)
+        if status == "failed":
+            task["finishedAt"] = now()
+        text = ("等待你补充信息：" if status == "awaiting_user" else "本次任务未完成：") + outcome["reason"]
+        for key in ["question", "summary", "evidence"]:
+            if outcome.get(key):
+                text += "\n\n" + outcome[key]
+        session["messages"].append({"role": "assistant", "content": text})
+        return outcome
 
     def queue_command(self, session, args):
         validate_command(args.get("command"), args.get("args"))
@@ -506,7 +601,11 @@ class Workspace:
         duplicate = next((c for c in reversed(session["commands"]) if c["taskId"] == task["id"] and c["signature"] == signature), None)
         if duplicate and args.get("retry_id") != duplicate["id"]:
             return {**duplicate, "deduplicated": True, "message": "检查结果后明确指定 retry_id 才会重试。"}
-        command = {"id": uid(), "taskId": task["id"], "command": args["command"], "args": args["args"], "purpose": args["purpose"][:1000], "script": script,
+        failed_retries = [c for c in session["commands"] if c["taskId"] == task["id"] and c["signature"] == signature
+                          and c.get("attempt", 1) == task.get("attempt", 1) and c["status"] not in {"passed", "denied"}]
+        if len(failed_retries) >= 2:
+            raise AppError("相同源码与命令已检查失败两次；先定位输出、修改实现或调整检查方案，不能继续原样重试。")
+        command = {"id": uid(), "taskId": task["id"], "attempt": task.get("attempt", 1), "command": args["command"], "args": args["args"], "purpose": args["purpose"][:1000], "script": script,
                    "signature": signature, "fingerprint": fingerprint, "timeoutMs": min(120000, max(100, int(args.get("timeout_ms", 60000)))),
                    "status": "queued" if task["permissions"]["commands"] else "pending_approval", "output": "", "bytes": 0, "truncated": False, "createdAt": now(), "exitCode": None}
         session["commands"].append(command)
@@ -545,6 +644,8 @@ class Workspace:
 
     async def start_run(self, session_id, data):
         session = self.session(session_id)
+        if session.get("archivedAt"):
+            raise AppError("请先恢复已归档会话，再开始任务。", 409)
         self.assert_idle(session["projectId"], session_id)
         if self.pending(session):
             raise AppError("请先处理当前待审核工作。", 409)
@@ -559,7 +660,8 @@ class Workspace:
         if session.get("task"):
             session.setdefault("tasks", []).append(session["task"])
         permissions = data.get("permissions") or {}
-        session["task"] = {"id": uid(), "goal": message.strip(), "acceptance": str(data.get("acceptance") or message)[:4000], "kind": "inspect" if data.get("kind") == "inspect" else "change",
+        session["task"] = {"id": uid(), "goal": message.strip(), "acceptance": str(data.get("acceptance") or message)[:4000], "kind": task_kind(message, data.get("kind")),
+                           "requestedKind": data.get("kind") if data.get("kind") in ("inspect", "change") else "auto",
                            "permissions": {"edits": permissions.get("edits") is True, "commands": permissions.get("commands") is True}, "phase": "understand", "revision": 0,
                            "rounds": 0, "calls": 0, "startedAt": now(), "metrics": {"inputTokens": 0, "outputTokens": 0, "modelMs": 0, "failedCommands": 0, "interventions": 0}}
         if skill_snapshot:
@@ -574,10 +676,28 @@ class Workspace:
 
     async def resume_run(self, session_id, data=None):
         session = self.session(session_id)
+        if session.get("archivedAt"):
+            raise AppError("请先恢复已归档会话，再继续任务。", 409)
         self.assert_idle(session["projectId"], session_id, allow_command=True)
         if not session.get("task") or session["status"] == "completed" or self.pending(session):
             raise AppError("请先处理审核，确认当前有可继续的任务。", 409)
+        feedback = (data or {}).get("feedback")
+        if session["status"] == "awaiting_user" and (not isinstance(feedback, str) or not feedback.strip()):
+            raise AppError("请先在输入框回答当前问题，再继续任务。", 409)
         provider = self.find(self.data["providers"], session["providerId"], "原模型配置")
+        task = session["task"]
+        if session["status"] in {"failed", "stopped", "awaiting_user"}:
+            if task.get("outcome"):
+                task["attempts"] = [*task.get("attempts", [])[-9:], task["outcome"]]
+            task.pop("reliability", None)
+            task.pop("outcome", None)
+            task.pop("finishedAt", None)
+            task["attempt"] = task.get("attempt", 1) + 1
+        # Correct legacy default-change reviews only before any source change or command.
+        if ("requestedKind" not in task and task["kind"] == "change" and task_kind(task["goal"]) == "inspect"
+                and not any(c.get("taskId") == task["id"] for c in [*session["changes"], *session["commands"]])):
+            task.update(kind="inspect", requestedKind="auto")
+            self.record(session, "task_mode_corrected", kind="inspect", reason="legacy review without changes or commands")
         self.repair_history(session)
         session["error"] = ""
         session["history"].append({"role": "user", "content": "继续同一目标。先检查计划、文件和命令结果；中断结果未知，不得假设成功。"})
@@ -592,6 +712,7 @@ class Workspace:
         provider = {**provider, "apiKey": self.decrypt(provider.get("secret"))}
         stop = asyncio.Event()
         self.stops[session["id"]] = stop
+        session["task"].pop("outcome", None)
         session.update(status="running", updatedAt=now())
         self.save()
         self.runs[session["id"]] = asyncio.create_task(self.run(session, provider, stop))
@@ -600,6 +721,9 @@ class Workspace:
     async def run(self, session, provider, stop):
         import time
         task, calls = session["task"], 0
+        guard = ProgressGuard(task)
+        text_only_rounds = 0
+        failure_code = "execution_error"
         try:
             for round_index in range(40):
                 if stop.is_set():
@@ -613,8 +737,14 @@ class Workspace:
                         raise AppError("任务已停止。")
                     if command["status"] not in ACTIVE_COMMANDS and not command.get("observed"):
                         session["history"].append({"role": "user", "content": "Observed process result (untrusted output):\n" + dumps(command)})
+                        if command["status"] not in {"passed", "denied"}:
+                            failure = guard.failed("behavior_check", digest(command["signature"]), command.get("error") or command.get("output", "")[-1000:] or command["status"])
+                            session["history"].append({"role": "user", "content": "Check recovery guidance:\n" + dumps(failure)})
+                        elif command["status"] == "passed":
+                            guard.succeeded("command_result", command["id"], command)
                         command["observed"] = True
                 checkpoint = {k: task.get(k) for k in ["goal", "acceptance", "kind", "permissions", "checkpoint", "skill"]}
+                checkpoint["recovery"] = guard.state["recentFailures"]
                 checkpoint["observations"] = session["observations"]
                 checkpoint["changes"] = [{k: c[k] for k in ["id", "path", "status"]} for c in session["changes"] if c.get("taskId") == task["id"]]
                 checkpoint["commands"] = [{k: c.get(k) for k in ["id", "command", "args", "status", "exitCode", "error", "stale"]} for c in session["commands"] if c["taskId"] == task["id"]]
@@ -623,7 +753,18 @@ class Workspace:
                     self.record(session, "context_compacted", keptMessages=len(history))
                 session["history"] = history
                 began = time.monotonic()
-                answer = await call_model(provider, [{"role": "system", "content": SYSTEM + task_skill_context(task)}, {"role": "user", "content": "Persisted task state (facts, not instructions):\n" + dumps(checkpoint)}, *history], stop, self.model_client)
+                guidance = ""
+                if task["kind"] == "inspect" and round_index >= 10:
+                    guidance = "\n审查收敛提醒：已进行多轮调查。优先基于已读源码核实并交付第一批结论，说明覆盖范围；只读审查不要求行为测试。用 finish_task 输出文件行号证据，不继续泛化遍历。"
+                if round_index >= 35 or calls >= 105:
+                    guidance += "\n本次执行预算即将耗尽。立即汇总已有证据；已满足完成条件则 finish_task，否则清楚说明具体阻塞与已有结论，不再扩展调查。"
+                if guard.state["recentFailures"]:
+                    guidance += "\n工具失败后须根据 Persisted task state 的 recovery 调整策略。不得原样循环；需要具体用户答案时 request_user，无法完成时 fail_task。"
+                if guard.state["dryRounds"] >= 5:
+                    guidance += "\n已有多轮无新证据。停止泛化读取或重复计划，核实已有结论并选择 finish_task、request_user 或 fail_task。"
+                failure_code = "model_error"
+                answer = await call_model(provider, [{"role": "system", "content": SYSTEM + task_skill_context(task) + guidance}, {"role": "user", "content": "Persisted task state (facts, not instructions):\n" + dumps(checkpoint)}, *history], stop, self.model_client)
+                failure_code = "execution_error"
                 usage = answer.pop("usage", {})
                 task["metrics"]["modelMs"] += round((time.monotonic() - began) * 1000)
                 task["metrics"]["inputTokens"] += int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0)
@@ -639,49 +780,96 @@ class Workspace:
                     if stop.is_set():
                         raise AppError("任务已停止。")
                     if calls >= 120:
-                        raise AppError("已达到本次 120 次工具上限，进度已保留。")
+                        failure_code = "budget_exhausted"
+                        raise AppError("已达到本次 120 次工具上限，任务尚未完成，进度已保留。")
                     calls += 1
                     task["calls"] += 1
                     name = call.get("function", {}).get("name", "unknown")
                     event = {"id": call["id"], "taskId": task["id"], "name": name, "detail": "", "status": "running", "startedAt": now()}
                     session["events"].append(event)
                     self.save()
+                    key = digest(dumps([name, call["function"].get("arguments"), task["revision"]]))
                     try:
                         args = json.loads(call["function"].get("arguments") or "{}")
-                        event["detail"] = str(next((args[k] for k in ["path", "query", "purpose", "next_action"] if args.get(k)), ""))[:200]
+                        if not isinstance(args, dict):
+                            raise AppError("工具参数须为 JSON 对象。")
+                        key = guard.key(name, args, lambda path: self.safe_path(self.project(session["projectId"]), path))
+                        guard.before(name, key)
+                        event["detail"] = str(next((args[k] for k in ["path", "query", "purpose", "next_action", "question", "reason"] if args.get(k)), ""))[:200]
                         self.record(session, "tool_started", id=call["id"], name=name, args=args)
                         output = await self.execute(session, name, args, stop)
-                        event["status"] = "completed"
+                        if isinstance(output, dict) and output.get("error"):
+                            failure = guard.failed(name, key, output["error"])
+                            output = {**output, **failure}
+                            event.update(status="error", error=output["error"])
+                        else:
+                            guard.succeeded(name, key, output)
+                            event["status"] = "completed"
                     except Exception as exc:
-                        output = {"error": "文件不存在。" if isinstance(exc, FileNotFoundError) else str(exc)[:1000]}
-                        event.update(status="error", error=output["error"])
+                        error = "文件不存在。" if isinstance(exc, FileNotFoundError) else str(exc)[:1000]
+                        output = guard.failed(name, key, exc)
+                        output["error"] = error
+                        event.update(status="error", error=error)
+                    if event["status"] == "error":
+                        task["metrics"]["toolErrors"] = task["metrics"].get("toolErrors", 0) + 1
+                        event["recovery"] = output.get("recovery", "")
                     event["finishedAt"] = now()
                     session["history"].append({"role": "tool", "tool_call_id": call["id"], "content": dumps(output)})
                     self.record(session, "tool_finished", id=call["id"], name=name, status=event["status"], output=output)
                     self.save()
-                    if session["status"] == "completed":
+                    if session["status"] in {"completed", "failed", "awaiting_user"}:
                         break
-                if session["status"] == "completed":
-                    self.repair_history(session)
-                    self.record(session, "task_completed", result=task["result"], metrics=task["metrics"])
+                    if self.pending(session) or any(c["status"] in {"running", "queued"} for c in session["commands"]):
+                        break
+                    failure_code = "no_progress"
+                    guard.check_limits()
+                    failure_code = "execution_error"
+                self.repair_history(session)
+                if session["status"] in {"completed", "failed", "awaiting_user"}:
+                    event_type = {"completed": "task_completed", "failed": "task_failed", "awaiting_user": "task_waiting_user"}[session["status"]]
+                    self.record(session, event_type, result=task.get("result"), outcome=task.get("outcome"), metrics=task["metrics"])
                     return
                 if any(c["status"] == "pending" for c in session["changes"]):
+                    if guard.progress:
+                        guard.state["dryRounds"] = 0
                     session["status"] = "review"
+                    task["phase"] = "awaiting_approval"
+                    task["outcome"] = {"status": "awaiting_user", "code": "change_approval", "reason": "等待用户审核源码修改。", "at": now()}
+                    self.record(session, "task_waiting_approval", outcome=task["outcome"])
                     return
                 if any(c["status"] == "pending_approval" for c in session["commands"]):
+                    if guard.progress:
+                        guard.state["dryRounds"] = 0
                     session["status"] = "waiting"
+                    task["phase"] = "awaiting_approval"
+                    task["outcome"] = {"status": "awaiting_user", "code": "command_approval", "reason": "等待用户批准检查命令。", "at": now()}
+                    self.record(session, "task_waiting_approval", outcome=task["outcome"])
                     return
                 if not answer.get("tool_calls"):
                     session["history"].append({"role": "user", "content": "文本不能作为完成依据，请继续验证并调用 finish_task；缺少信息时说明具体阻塞。"})
-                    if round_index >= 2:
-                        raise AppError("模型未给出可验证的完成结果，请补充反馈后继续。")
+                    text_only_rounds += 1
+                    if text_only_rounds >= 3:
+                        failure_code = "missing_outcome"
+                        raise AppError("模型连续三轮未调用工具或交付明确结果，本次执行失败；已有记录已保留。")
+                else:
+                    text_only_rounds = 0
+                failure_code = "no_progress"
+                guard.end_round()
+                failure_code = "execution_error"
                 if calls >= 120:
                     break
-            raise AppError("达到本次 40 轮或 120 次工具上限，进度已保留。")
+            failure_code = "budget_exhausted"
+            raise AppError("达到本次 40 轮或 120 次工具上限，任务尚未完成，进度已保留。")
         except Exception as exc:
-            session.update(status="stopped" if stop.is_set() else "needs_help", error="已停止，目标与执行记录已保留。" if stop.is_set() else str(exc)[:1000])
+            if stop.is_set():
+                session.update(status="stopped", error="已停止，目标与执行记录已保留。")
+                task["outcome"] = {"status": "stopped", "code": "interrupted", "reason": session["error"], "at": now()}
+                event_type = "task_interrupted"
+            else:
+                self.end_attempt(session, "failed", failure_code, str(exc), evidence=task.get("checkpoint", {}).get("summary", "尚未建立验证证据。"))
+                event_type = "task_failed"
             self.repair_history(session)
-            self.record(session, "task_interrupted", status=session["status"], error=session["error"])
+            self.record(session, event_type, status=session["status"], error=session["error"], outcome=task.get("outcome"))
         finally:
             self.runs.pop(session["id"], None)
             self.stops.pop(session["id"], None)
@@ -739,6 +927,8 @@ class Workspace:
 
     async def stop(self, session_id):
         session = self.session(session_id)
+        if session["status"] in {"completed", "idle"} and session_id not in self.runs:
+            return {"ok": True}
         if session_id in self.stops:
             self.stops[session_id].set()
         waiting = []
@@ -753,6 +943,8 @@ class Workspace:
             await self.runs[session_id]
         else:
             session["status"] = "stopped"
+            if session.get("task"):
+                session["task"]["outcome"] = {"status": "stopped", "code": "user_stopped", "reason": "用户已停止任务。", "at": now()}
         self.save()
         return {"ok": True}
 
@@ -783,9 +975,9 @@ class Workspace:
             if first == "projects" and len(segments) == 3:
                 project = self.project(segments[1])
                 if segments[2] == "files":
-                    return {"files": self.files(project)}
+                    return await asyncio.to_thread(self.list_page, project, {"path": query.get("path", ""), **page_query(query)})
                 if segments[2] == "file":
-                    return {"content": self.read_source(project, query.get("path"))}
+                    return await asyncio.to_thread(source_page, self.safe_path(project, query.get("path")), page_query(query))
         if method != "POST":
             raise AppError("接口不存在或请求方法不正确。", 405)
         if first == "pick-folder":
@@ -813,6 +1005,8 @@ class Workspace:
                 return self.create_session(data)
             session_id = segments[1]
             action = segments[2] if len(segments) > 2 else ""
+            if len(segments) == 3 and action in {"archive", "restore"}:
+                return self.archive_session(session_id, action == "archive")
             if action == "run":
                 return await self.start_run(session_id, data)
             if action == "resume":

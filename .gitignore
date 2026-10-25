@@ -18,6 +18,7 @@ test-results/
 *.key
 credentials*
 secrets*
+*_connect_config.json
 workspace.json
 workspace.tmp
 Thumbs.db

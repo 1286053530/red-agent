@@ -29,9 +29,11 @@ else {
     const trusted=event=>{
       if(event.sender!==win.webContents || event.senderFrame!==win.webContents.mainFrame || new URL(event.senderFrame.url).origin!==origin) throw Error('此页面不允许调用客户端接口。');
     };
-    ipcMain.handle('xhs:open',async event=>{trusted(event);return xhs.open();});
+    ipcMain.handle('xhs:open',async(event,bounds)=>{trusted(event);xhs.setBounds(bounds);return xhs.open();});
+    ipcMain.handle('xhs:bounds',async(event,bounds)=>{trusted(event);return xhs.setBounds(bounds);});
+    ipcMain.handle('xhs:hide',async event=>{trusted(event);return xhs.hide();});
+    ipcMain.handle('xhs:resume',async(event,bounds)=>{trusted(event);xhs.setBounds(bounds);return xhs.show();});
     ipcMain.handle('xhs:close',async event=>{trusted(event);return xhs.close();});
-    ipcMain.handle('xhs:external',async event=>{trusted(event);return xhs.openInBrowser();});
     win.webContents.on('did-start-loading',()=>void xhs.close());
     win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
     win.webContents.on('will-navigate',(event,url)=>{if(new URL(url).origin!==origin)event.preventDefault();});
@@ -43,7 +45,7 @@ else {
       if(!smokeTest)win.show();
     };
     win.webContents.once('dom-ready',()=>void finishLoad().catch(error=>{dialog.showErrorBox('客户端验证失败',error.message);app.exit(1);}));
-    void win.loadURL(origin+'/#account').catch(error=>{if(!launched){dialog.showErrorBox('客户端启动失败',error.message);app.exit(1);}});
+    void win.loadURL(origin+'/#developer').catch(error=>{if(!launched){dialog.showErrorBox('客户端启动失败',error.message);app.exit(1);}});
   }).catch(error=>{dialog.showErrorBox('客户端启动失败',error.message);app.exit(1);});
   app.on('before-quit',event=>{
     if(quitting)return;

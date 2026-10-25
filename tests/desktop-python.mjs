@@ -21,7 +21,7 @@ app.whenReady().then(async () => {
     const fixture='<html><body><div id="app"><div class="login-container">扫码登录<div class="qrcode"><canvas width="160" height="160"></canvas></div></div></div><script>window.__INITIAL_STATE__={user:{loggedIn:false}};const c=document.querySelector("canvas").getContext("2d");c.fillStyle="black";c.fillRect(10,10,100,100);</script></body></html>';
     let officialRequests=0;
     profile.webRequest.onCompleted(()=>{officialRequests++;});
-    xhs=new DesktopXhs(win,{partition,openExternal:async()=>{throw Error('Unexpected external open during backend test');}});
+    xhs=new DesktopXhs(win,{partition});
     backend=await startPythonBackend({root:resolve('.'),resources:resolve('release/win-unpacked/resources'),packaged,dataDir:folder,
       native:async(method,params)=>{
         if(method==='pick-folder')return {path:join(folder,'project')};
