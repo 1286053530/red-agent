@@ -39,7 +39,7 @@ npm ci
 
 Linux/macOS 使用 `.venv/bin/python`；安装和构建依赖可使用 `requirements-dev.txt`，本次完整锁文件针对 Windows Python 3.10。桌面打包目前只验证 Windows x64。
 
-开发过程见 [2.1 系列开发记录](docs/DEVELOPMENT_2.1.md)，服务器下载发布与校验见 [下载服务部署](docs/DOWNLOAD_DEPLOYMENT.md)。
+功能完成情况与后续优先级见 [开发进度](docs/DEVELOPMENT_PROGRESS.md)，开发过程见 [2.1 系列开发记录](docs/DEVELOPMENT_2.1.md)，服务器下载发布与校验见 [下载服务部署](docs/DOWNLOAD_DEPLOYMENT.md)。
 
 ## Windows 桌面与构建
 
