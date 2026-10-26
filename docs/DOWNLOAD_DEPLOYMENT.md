@@ -1,6 +1,28 @@
 # 安装包下载服务
 
-本地构建版本：2.1.26；公网版本：2.1.19。文档更新：2026-10-26（北京时间）。已部署下载入口：[软件下载](http://192.144.142.111:3300/)。
+本地构建版本：2.1.28；公网版本：2.1.19。文档更新：2026-10-26（北京时间）。已部署下载入口：[软件下载](http://192.144.142.111:3300/)。
+
+## 2.1.28 本地构建
+
+移除页面浏览工具栏中的网页标题、“关闭官网”按钮和说明文字；保留缩放、重置及放大浏览控件，按 Escape 关闭页面。页面回归 5 项通过；打包后端桥接及 Node/Python 自检、源码/解包/实际 Portable 启动验证通过。未执行真实官网登录、交互安装、升级、卸载或无 Python 环境验收。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.28-x64.exe | 130307945 | `9e444ae35ffb90bd6c22bedfaad2f35b202ef6b03563c964ce2611fb7c76ad17` |
+| XiaozhuShujin-2.1.28-x64-Portable.exe | 130100511 | `8c7189f573fdf008f1e20a3ef1d67f2633867e7e47c7812bb75a7e51640739ef` |
+
+产物位于 `release/`，校验清单为 `release/SHA256SUMS-2.1.28.txt`，本地下载文件位于 `.local/download-publish/releases/2.1.28/`。保留旧版产物，本次未上传公网。
+
+## 2.1.27 本地构建
+
+已移除不可用的图片按钮和文件选择入口，保留 Ctrl+V 粘贴与拖入；未选择项目时可先粘贴并预览，选中项目后保留草稿并发送。输入框、页面和图像协议相关回归 23 项通过；打包后端桥接及 Node/Python 自检、源码/解包/实际 Portable 启动和三种模式图片粘贴桌面冒烟验证通过。未执行真实官网登录、交互安装、升级、卸载或无 Python 环境验收。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.27-x64.exe | 130308999 | `86d8282d97a287e61482ad2f32654a37dbe973884087431c6094b397dda45823` |
+| XiaozhuShujin-2.1.27-x64-Portable.exe | 130101572 | `daf12a5e112fd6a9105fd015338650bb8958b527f74cb1e9a50df6ffc730b160` |
+
+产物位于 `release/`，校验清单为 `release/SHA256SUMS-2.1.27.txt`，本地下载文件位于 `.local/download-publish/releases/2.1.27/`。保留旧版产物，本次未上传公网。
 
 ## 2.1.26 本地构建
 
@@ -93,7 +115,7 @@
 
 服务器需要 Linux、Python 3.8+、已运行的 Nginx 和允许执行 `sudo -n` 的 SSH 账号。密码通过 `SHUJIN_DEPLOY_PASSWORD` 环境变量读取，不接受密码命令行参数。连接软件导出的 password 可能是加密值，不能直接作为 SSH 明文密码。
 
-本机先按 [Windows 桌面与构建](../README.md#windows-桌面与构建) 执行 `npm run dist:win`。构建输出固定为仓库根目录的 `release/`，两个文件名中的版本取自 `package.json`；`scripts/prepare_downloads.py` 从这里读取安装包，并在 `.local/download-publish/releases/2.1.26/` 中组织发布文件。服务器目标目录为 `/srv/xiaozhu-downloads/releases/2.1.26/`，不要把本机构建输出改到 `release/2.1.26/`。
+本机先按 [Windows 桌面与构建](../README.md#windows-桌面与构建) 执行 `npm run dist:win`。构建输出固定为仓库根目录的 `release/`，两个文件名中的版本取自 `package.json`；`scripts/prepare_downloads.py` 从这里读取安装包，并在 `.local/download-publish/releases/2.1.27/` 中组织发布文件。服务器目标目录为 `/srv/xiaozhu-downloads/releases/2.1.27/`，不要把本机构建输出改到 `release/2.1.27/`。
 
 在准备发布文件前完成下方验收，记录本次构建的版本、时间、文件大小及 SHA-256；部署前核对待上传文件与验收文件的摘要一致。重新构建同版本时不可复用旧验收结果，下表的历史校验值也不能替代新产物的核对。
 

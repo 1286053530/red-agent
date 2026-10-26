@@ -148,8 +148,10 @@ async def test_image_composer_and_dynamic_height(workspace, live_server):
             assert await prompt.evaluate("el=>el.scrollHeight>el.clientHeight && getComputedStyle(el).overflowY==='auto'")
             await prompt.fill('')
             assert (await prompt.bounding_box())['height'] == initial
-            file = {'name': '截图.png', 'mimeType': 'image/png', 'buffer': PNG}
-            await page.locator('#devImageInput').set_input_files(file)
+            async def paste_image(name='paste.png'):
+                encoded = base64.b64encode(PNG).decode()
+                await prompt.evaluate("""(el, args) => {const bytes=Uint8Array.from(atob(args.encoded),c=>c.charCodeAt(0));const data=new DataTransfer();data.items.add(new File([bytes],args.name,{type:'image/png'}));el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));}""", {'encoded': encoded, 'name': name})
+            await paste_image('截图.png')
             await page.locator('#devImageDrafts img').wait_for()
             assert await page.locator('#devSendButton').is_enabled()
             await page.locator('[data-remove-image]').click()
@@ -176,7 +178,7 @@ async def test_image_composer_and_dynamic_height(workspace, live_server):
             assert await page.locator('#devImageViewer').is_visible()
             await page.keyboard.press('Escape')
             assert not await page.locator('#devImageViewer').is_visible()
-            await page.locator('#devImageInput').set_input_files(file)
+            await paste_image()
             await page.locator('#devImageDrafts img').wait_for()
             steps.append(('request_user', {'question': '已收到补充图', 'reason': '确认下一步', 'summary': '图片已保留'}))
             await page.locator('#devSendButton').click()

@@ -1,7 +1,21 @@
+import base64
+import json
 import httpx
 from playwright.async_api import async_playwright
 
 from conftest import ROOT, tool_call
+
+
+PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')
+
+
+async def paste_png(prompt):
+    await prompt.evaluate("""(el, encoded) => {
+      const bytes = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+      const data = new DataTransfer();
+      data.items.add(new File([bytes], 'clipboard.png', {type: 'image/png'}));
+      el.dispatchEvent(new ClipboardEvent('paste', {clipboardData: data, bubbles: true, cancelable: true}));
+    }""", base64.b64encode(PNG).decode())
 
 
 async def test_composer_draft_without_selected_project(workspace, live_server):
@@ -11,7 +25,7 @@ async def test_composer_draft_without_selected_project(workspace, live_server):
     requests = []
 
     async def handler(request):
-        requests.append(request)
+        requests.append(json.loads(request.content))
         return httpx.Response(200, json={"choices": [{"message": {"tool_calls": [
             tool_call('request_user', {'question': '确认任务范围？', 'reason': '确认预期', 'summary': '等待回答'})
         ]}}]})
@@ -26,11 +40,14 @@ async def test_composer_draft_without_selected_project(workspace, live_server):
             prompt = page.locator('#devPrompt')
             await page.wait_for_function("document.querySelector('#devModelLabel').textContent==='fixture'")
             assert await prompt.is_enabled()
+            assert await page.locator('#devAddImage, #devImageInput').count() == 0
             assert await page.locator('#devSessionCount').inner_text() == '选择项目后开始'
             assert await page.locator('[data-session-id]').count() == 1
             assert '选择项目后发送' in await prompt.get_attribute('placeholder')
             await page.click('#devBrowserTab')
             await prompt.fill('检查项目中的问题')
+            await paste_png(prompt)
+            await page.locator('#devImageDrafts img').wait_for()
             await prompt.click()
             assert not await page.evaluate("document.querySelector('#developerView').classList.contains('files-collapsed')")
             assert await page.locator('#devSendButton').is_disabled()
@@ -39,12 +56,15 @@ async def test_composer_draft_without_selected_project(workspace, live_server):
             assert not requests
             await page.locator(f'[data-project-id="{project["id"]}"]').click()
             assert await prompt.input_value() == '检查项目中的问题'
+            assert await page.locator('#devImageDrafts img').count() == 1
+            assert await page.locator('#devImageDrafts figcaption').inner_text() == 'clipboard.png'
             assert await prompt.is_enabled()
             assert await page.locator('#devSendButton').is_enabled()
             assert len(w.data['sessions']) == 1
             await page.locator('#devSendButton').click()
             await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='等待用户回答'")
             assert len(requests) == 1
+            assert 'data:image/png;base64,' in json.dumps(requests[0])
             assert len(w.data['sessions']) == 2
             assert await prompt.is_enabled()
             assert await prompt.input_value() == ''

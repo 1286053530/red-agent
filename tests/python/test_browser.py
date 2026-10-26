@@ -148,7 +148,8 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
             assert not await page.locator(".sidebar").is_visible()
             assert await page.locator("#xhsTaskStrip").is_visible()
             assert await page.evaluate("openedBounds.x > document.querySelector('.activity-rail').getBoundingClientRect().right")
-            await page.click("#manualOfficialBack")
+            assert await page.locator('#manualOfficialTitle, #manualOfficialState, #manualOfficialBack').count() == 0
+            await page.keyboard.press("Escape")
             assert not await page.locator(".manual-official").is_visible()
             await page.locator("#accountView [data-open-xhs]").click()
             assert await page.locator("#manualOfficialExternal").count() == 0
@@ -164,7 +165,7 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
             assert await page.locator(".manual-official").is_visible()
             assert await page.evaluate("manualCalls.open") == 3
             assert await page.evaluate("manualCalls.resume") == 1
-            await page.click("#manualOfficialBack")
+            await page.keyboard.press("Escape")
             await page.locator('.activity-rail [data-view="developer"]').click()
             await page.locator('.activity-rail [data-view="account"]').click()
             assert not await page.locator(".manual-official").is_visible()
@@ -181,6 +182,7 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
                 assert await button.inner_text() == ''
                 assert await button.get_attribute('title')
                 assert await button.locator('svg[aria-hidden=true] use').get_attribute('href') == symbol
+            assert await page.locator('#manualOfficialTitle, #manualOfficialState, #manualOfficialBack').count() == 0
             assert await page.locator('#devComposer').is_visible()
             assert await page.evaluate('manualCalls.open') == 4
             async def click_conversation_and_expect_browser_hidden(target):
@@ -227,7 +229,6 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
             assert await page.locator('#devBrowserTabPanel .manual-official').is_visible()
             assert await page.evaluate('manualCalls.open') == 4
             await page.click('#manualOfficialZoomOut')
-            assert await page.locator('#manualOfficialTitle').inner_text() == '小红书官网 · 70%'
             await page.click('#manualOfficialZoomOut')
             await page.click('#manualOfficialZoomOut')
             assert await page.evaluate('manualZoom') == 0.5
@@ -275,21 +276,15 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
                     layout = await page.evaluate("""() => {
                         const rect = element => {const r=element.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
                         const toolbar=document.querySelector('.manual-official-toolbar');
-                        const title=document.querySelector('#manualOfficialTitle');
+                        const actions=document.querySelector('.manual-official-actions');
                         const buttons=[...toolbar.querySelectorAll('button')].filter(b=>b.getClientRects().length);
-                        return {toolbar:rect(toolbar),title:rect(title),
-                            titleStyle:{whiteSpace:getComputedStyle(title).whiteSpace,overflow:getComputedStyle(title).overflow,textOverflow:getComputedStyle(title).textOverflow},
-                            titleTooltip:title.title,buttons:buttons.map(rect),
-                            status:rect(document.querySelector('#manualOfficialState')),
+                        return {toolbar:rect(toolbar),actions:rect(actions),buttons:buttons.map(rect),
                             viewport:rect(document.querySelector('.manual-official-viewport'))};
                     }""")
-                    assert layout['titleStyle'] == {'whiteSpace': 'nowrap', 'overflow': 'hidden', 'textOverflow': 'ellipsis'}
-                    assert layout['titleTooltip'] == f'小红书官网 · {round(zoom * 100)}%'
-                    assert layout['title']['width'] > 0
-                    assert layout['toolbar']['bottom'] <= layout['status']['y']
-                    assert layout['status']['bottom'] <= layout['viewport']['y']
+                    assert layout['toolbar']['bottom'] <= layout['viewport']['y']
                     assert layout['viewport']['height'] > 100
-                    previous_right = layout['title']['right']
+                    assert layout['actions']['right'] <= layout['toolbar']['right']
+                    previous_right = layout['actions']['x']
                     for button in layout['buttons']:
                         assert previous_right <= button['x']
                         assert button['y'] >= layout['toolbar']['y']
@@ -305,7 +300,7 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
             assert not await page.get_by_role('button', name='放大浏览', exact=True).is_visible()
             await page.locator('.activity-rail [data-view="developer"]').click()
             assert await page.locator('#devBrowserTabPanel .manual-official').is_visible()
-            await page.click('#manualOfficialBack')
+            await page.keyboard.press('Escape')
             assert await page.locator('#devBrowserTabPanel .dev-browser-empty').is_visible()
             await page.locator('#devBrowserTab').focus()
             await page.keyboard.press('ArrowRight')

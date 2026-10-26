@@ -31,7 +31,7 @@
   composerTools.className = 'dev-composer-tools';
   composerTools.innerHTML = '<details id="devAccessPicker" class="dev-composer-picker"><summary aria-label="访问权限"><svg class="icon" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"/></svg><span id="devAccessLabel">逐项审核</span><span class="dev-picker-chevron">⌄</span></summary><div class="dev-picker-popover"><strong>访问权限</strong><div class="dev-access-modes" role="radiogroup" aria-label="访问权限模式"><label><input type="radio" name="devAccessMode" value="readonly"><span>只读分析<small>仅阅读源码，不修改或运行代码</small></span></label><label><input type="radio" name="devAccessMode" value="review" checked><span>逐项审核<small>修改和检查命令逐项确认</small></span></label><label><input type="radio" name="devAccessMode" value="automatic"><span>自动执行<small>允许应用修改、运行受支持的检查</small></span></label></div><p>权限仅对下一次新任务生效；当前任务权限保持不变。自动执行仍受已导入目录和命令范围限制。</p><div id="devAdvancedOptions"></div></div></details><details id="devModelPicker" class="dev-composer-picker"><summary aria-label="选择模型"><span id="devModelLabel">未配置模型</span><span class="dev-picker-chevron">⌄</span></summary><div class="dev-picker-popover"><strong>执行模型</strong><div id="devModelOptions"></div></div></details>';
   const composerFooter = $('.dev-composer-bottom');
-  $('#devPrompt').insertAdjacentHTML('beforebegin', '<div id="devImageDrafts" class="dev-image-drafts hidden" aria-label="待发送的图片"></div><input id="devImageInput" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>');
+  $('#devPrompt').insertAdjacentHTML('beforebegin', '<div id="devImageDrafts" class="dev-image-drafts hidden" aria-label="待发送的图片"></div>');
   root.insertAdjacentHTML('beforeend', '<dialog id="devImageViewer" class="dev-image-viewer" aria-label="查看图片"><form method="dialog"><button aria-label="关闭图片">×</button></form><img alt=""></dialog>');
   $('#devConversation').addEventListener('click', event => {
     const button = event.target.closest('[data-view-image]');
@@ -41,7 +41,6 @@
     viewer.querySelector('img').alt = image.alt;
     viewer.showModal();
   });
-  composerTools.insertAdjacentHTML('afterbegin', '<button type="button" id="devAddImage" class="dev-attach-button" aria-label="添加图片" title="添加图片（也可粘贴或拖入）"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 5 5 3-3 4 4"/></svg></button>');
   composerFooter.insertBefore(composerTools, composerFooter.lastElementChild);
   $('#devModelOptions').append($('.dev-model-row'));
   $('#devAdvancedOptions').append($('.dev-task-options'));
@@ -321,7 +320,6 @@
     if ($('#devResumeTask') && awaiting) $('#devResumeTask').disabled = !hasText || addingImages || sending || !!state.session?.archivedAt;
     $('#devSendButton').disabled = !hasText || !state.projectId || !$('#devModelSelect').value || state.busy || addingImages || sending || !!state.session?.archivedAt;
     $('#devSendButton').title = !state.projectId ? (state.projects.length ? '请先选择左侧项目' : '请先导入本地项目') : awaiting ? '回答并继续' : '发送';
-    $('#devAddImage').disabled = !state.projectId || state.busy || addingImages || sending || !!state.session?.archivedAt;
   }
   function resizePrompt() {
     const prompt = $('#devPrompt');
@@ -352,7 +350,7 @@
     }).join('') + '</div>';
   }
   async function addImages(files) {
-    if (!files.length || addingImages || sending || state.busy || !state.projectId || state.session?.archivedAt) return;
+    if (!files.length || addingImages || sending || state.busy || state.session?.archivedAt) return;
     const generation = draftGeneration;
     addingImages = true; updateSendButton();
     try {
@@ -378,10 +376,8 @@
       if (generation !== draftGeneration) return;
       draftImages.push(...images); renderImageDrafts(); setError('');
     } catch (error) { if (generation === draftGeneration) setError(error.message); }
-    finally { addingImages = false; $('#devImageInput').value = ''; updateSendButton(); }
+    finally { addingImages = false; updateSendButton(); }
   }
-  $('#devAddImage').addEventListener('click', () => $('#devImageInput').click());
-  $('#devImageInput').addEventListener('change', event => { void addImages([...event.target.files]); });
   $('#devImageDrafts').addEventListener('click', event => {
     const button = event.target.closest('[data-remove-image]');
     if (!button || sending || state.busy || addingImages) return;
@@ -660,7 +656,7 @@
     });
   }
   async function selectProject(projectId, preferredSessionId) {
-    clearImages();
+    if (state.projectId) clearImages();
     pollGeneration++; pollingId = ''; state.projectId = projectId; state.sessionId = ''; state.session = null; state.busy = false; state.file = ''; state.files = []; rememberSelection();
     renderProjects(); renderFileTree(); renderConversation(); renderPending(); renderExecution(); setError('');
     $('#devEditorTitle').textContent = '项目文件 / 选择文件';

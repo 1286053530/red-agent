@@ -5,18 +5,19 @@
     const overlay=document.createElement('section');
     overlay.className='manual-official hidden';
     overlay.setAttribute('aria-label','手动访问小红书官网');
-    overlay.innerHTML='<div class="manual-official-toolbar"><strong id="manualOfficialTitle">小红书官网 · 80%</strong><div class="manual-official-actions"><button id="manualOfficialZoomReset" class="secondary-button hidden" title="恢复到 80%">重置</button><button id="manualOfficialZoomOut" class="secondary-button manual-official-icon" aria-label="缩小网页内容" title="缩小网页内容：每次 10%，最低 50%"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-zoom-out"/></svg></button><button id="manualOfficialExpand" class="secondary-button manual-official-icon hidden" aria-label="放大浏览" title="放大浏览"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-expand"/></svg></button><button id="manualOfficialBack" class="secondary-button">关闭官网</button></div></div><p id="manualOfficialState" role="status">官网可能要求登录或验证；工作台不读取消息，也不自动操作。</p><div class="manual-official-viewport" aria-label="官网显示区域"></div>';
+    overlay.innerHTML='<div class="manual-official-toolbar"><div class="manual-official-actions"><button id="manualOfficialZoomReset" class="secondary-button hidden" title="恢复到 80%">重置</button><button id="manualOfficialZoomOut" class="secondary-button manual-official-icon" aria-label="缩小网页内容" title="缩小网页内容：每次 10%，最低 50%"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-zoom-out"/></svg></button><button id="manualOfficialExpand" class="secondary-button manual-official-icon hidden" aria-label="放大浏览" title="放大浏览"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-expand"/></svg></button></div></div><div class="manual-official-viewport" aria-label="官网显示区域"></div>';
     const accountView=document.querySelector('#accountView');
     accountView.append(overlay);
     const viewport=overlay.querySelector('.manual-official-viewport');
-    const state=overlay.querySelector('#manualOfficialState');
+    const reportEmbeddedError=error=>{
+      const message=error?.message||'小红书页面操作失败。';
+      if(typeof window.showToast==='function')window.showToast(message);
+      else {const target=document.querySelector('#connectionError');if(target){target.textContent=message;target.classList.remove('hidden');}}
+    };
     let retained=false, opening=false, nativeVisible=false, lastBounds='';
     let zoomFactor=0.8, zoomPending=false;
     const zoomOut=overlay.querySelector('#manualOfficialZoomOut'),zoomReset=overlay.querySelector('#manualOfficialZoomReset');
     const updateZoomControls=()=>{
-      const title=overlay.querySelector('#manualOfficialTitle');
-      title.textContent='小红书官网 · '+Math.round(zoomFactor*100)+'%';
-      title.title=title.textContent;
       zoomOut.disabled=zoomPending||!retained||zoomFactor<=0.5;
       zoomReset.disabled=zoomPending||!retained;
       zoomReset.classList.toggle('hidden',zoomFactor===0.8);
@@ -25,7 +26,7 @@
       if(zoomPending||!retained)return;
       zoomPending=true;updateZoomControls();
       try {const result=await bridge.setOfficialZoom(factor);zoomFactor=result.zoomFactor;}
-      catch(error){state.textContent=error.message;}
+      catch(error){reportEmbeddedError(error);}
       finally{zoomPending=false;updateZoomControls();}
     };
     zoomOut.addEventListener('click',event=>{if(event.isTrusted)void changeZoom(Math.max(0.5,Math.round((zoomFactor-0.1)*100)/100));});
@@ -54,7 +55,7 @@
         const rect=bounds();
         const blocked=document.body.classList.contains('right-panel-resizing')||document.querySelector('#devSettingsModal:not(.hidden), #devImageViewer[open]');
         const visible=!!host()&&!overlay.classList.contains('hidden')&&viewport.getClientRects().length>0&&rect.width>0&&rect.height>0&&!blocked;
-        const failed=error=>{state.textContent=error.message;};
+        const failed=reportEmbeddedError;
         if(!visible){if(nativeVisible){nativeVisible=false;void bridge.hideOfficial().catch(failed);}return;}
         if(!retained)return;
         const key=JSON.stringify(rect);
@@ -72,12 +73,12 @@
       updateZoomControls();
       if(retained)opening=false;
       setSurface();
-      state.textContent=result.error||'由你手动浏览；工作台不读取消息，也不自动操作。';
+      if(result.error)reportEmbeddedError(new Error(result.error));
       if(result.visible||!retained)resize();
     });
     const switched=()=>{
       setSurface();
-      if(!host()&&nativeVisible){nativeVisible=false;void bridge.hideOfficial().catch(error=>{state.textContent=error.message;});}
+      if(!host()&&nativeVisible){nativeVisible=false;void bridge.hideOfficial().catch(reportEmbeddedError);}
       resize();
     };
     document.addEventListener('workspace:view',switched);
@@ -97,15 +98,14 @@
       finally {opening=false;setSurface();resize();}
     };
     overlay.querySelector('#manualOfficialExpand').addEventListener('click',event=>{if(event.isTrusted)showView('account');});
-    overlay.querySelector('#manualOfficialBack').addEventListener('click',event=>{if(event.isTrusted)void bridge.closeOfficial().catch(error=>{state.textContent=error.message;});});
     document.querySelectorAll('[data-open-xhs]').forEach(link=>{link.textContent='在工作台内打开官网';});
     document.querySelector('#accountView .page-intro p').textContent='在工作台内嵌官网中，由你手动浏览。';
-    document.querySelector('#accountView .account-hero-copy>p').textContent='点击后手动登录和浏览。切换到 Agent 后会保留网页，回来继续浏览；点击“关闭官网”或退出软件时才关闭。官网自身的后台连接可能继续运行。';
+    document.querySelector('#accountView .account-hero-copy>p').textContent='点击后手动登录和浏览。切换到 Agent 后会保留网页，回来继续浏览；按 Escape 或退出软件时关闭页面。官网自身的后台连接可能继续运行。';
     document.querySelector('#accountView .account-access-note p').textContent='清理仅影响本软件内嵌官网及旧版本的登录数据，不会清理系统浏览器，也不会访问官网执行退出。';
     document.querySelector('#clearConnectionButton').textContent='清理本软件登录数据';
     document.addEventListener('keydown',event=>{
       if(event.isTrusted&&event.key==='Escape'&&!overlay.classList.contains('hidden')&&
-        !document.querySelector('#devSettingsModal:not(.hidden), #devImageViewer[open], .dev-composer-picker[open]'))void bridge.closeOfficial();
+        !document.querySelector('#devSettingsModal:not(.hidden), #devImageViewer[open], .dev-composer-picker[open]'))void bridge.closeOfficial().catch(reportEmbeddedError);
     });
   }
   const errorTarget = document.querySelector('#connectionError');

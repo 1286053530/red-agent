@@ -1,6 +1,6 @@
 # 2.1 系列开发与交付记录
 
-记录日期：2026-10-25（北京时间）；文档修订：2026-10-26。当前本地桌面版本：2.1.26；公网仍为 2.1.19。
+记录日期：2026-10-25（北京时间）；文档修订：2026-10-26。当前本地桌面版本：2.1.28；公网仍为 2.1.19。
 
 ## 产品定位与界面
 
@@ -118,6 +118,19 @@ npx electron tests/desktop-python.mjs --packaged
 - 按用户调整，点击输入框不再收起页面浏览；点击对话空白或消息仍会收起，展开后复用原页面。
 - 定向回归 `node scripts/python.mjs test tests/python/test_composer.py tests/python/test_browser.py tests/python/test_images_responses.py -q --tb=short`：23 项通过。
 - Windows x64 安装版与免安装版已生成；打包后端桥接及 Node/Python 自检、源码/解包/实际 Portable 启动检查通过。SHA-256 清单位于 `release/SHA256SUMS-2.1.26.txt`，保留旧版本产物，未上传公网。
+
+## 2.1.27：图片直接粘贴
+
+- 移除无响应的图片图标和文件选择入口；保留将图片直接 Ctrl+V 粘贴到输入框或拖入的方式。
+- 无项目时允许图片作为草稿预览，首次选择项目后保留；发送时仍要求项目和模型。测试确认图片随模型请求提交。
+- 定向回归同 2.1.26 范围：23 项通过。
+- `npm run dist:win` 已生成 Windows x64 安装版与免安装版。打包后端桥接及 Node/Python 自检、源码/解包/Portable 桌面启动和图片粘贴冒烟检查通过。SHA-256 见 `release/SHA256SUMS-2.1.27.txt`；未上传公网。
+
+## 2.1.28：精简页面浏览工具栏
+
+- 移除网页标题、关闭官网按钮及说明文字，仅保留缩放、重置和放大浏览控件；页面按 Escape 关闭。
+- 页面回归 `node scripts/python.mjs test tests/python/test_browser.py -q --tb=short`：5 项通过。
+- Windows x64 安装版与免安装版已生成。打包后端桥接及 Node/Python 自检、源码/解包/Portable 启动检查通过；`release/SHA256SUMS-2.1.28.txt` 已记录 SHA-256。本次未上传公网。
 
 ## 当前限制
 

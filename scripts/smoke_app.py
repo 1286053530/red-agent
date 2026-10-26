@@ -84,7 +84,6 @@ async def main():
                     host.style.cssText='position:fixed;left:0;top:0;height:600px;z-index:999';
                     const overlay=document.querySelector('.manual-official').cloneNode(true);
                     overlay.classList.remove('hidden');
-                    overlay.querySelector('#manualOfficialTitle').textContent='小红书官网 · 70%';
                     for(const id of ['manualOfficialZoomReset','manualOfficialExpand'])overlay.querySelector('#'+id).classList.remove('hidden');
                     host.append(overlay);document.body.append(host);
                     try {
@@ -92,11 +91,11 @@ async def main():
                         for(const width of [280,320,360,440]) {
                             host.style.width=width+'px';
                             const toolbar=overlay.querySelector('.manual-official-toolbar').getBoundingClientRect();
-                            const title=overlay.querySelector('strong');
-                            const status=overlay.querySelector('p').getBoundingClientRect();
+                            const actions=overlay.querySelector('.manual-official-actions').getBoundingClientRect();
                             const viewport=overlay.querySelector('.manual-official-viewport').getBoundingClientRect();
-                            let right=title.getBoundingClientRect().right;
-                            let valid=getComputedStyle(title).whiteSpace==='nowrap' && getComputedStyle(title).textOverflow==='ellipsis' && toolbar.bottom<=status.top && status.bottom<=viewport.top;
+                            let right=actions.left;
+                            let valid=toolbar.bottom<=viewport.top && actions.right<=toolbar.right &&
+                                !overlay.querySelector('#manualOfficialTitle, #manualOfficialBack, #manualOfficialState');
                             for(const button of overlay.querySelectorAll('button')) {
                                 const rect=button.getBoundingClientRect();
                                 valid=valid && rect.left>=right && rect.right<=toolbar.right && rect.top>=toolbar.top && rect.bottom<=toolbar.bottom;
@@ -118,6 +117,13 @@ async def main():
                 await page.locator('#devPrompt').click()
                 await page.locator('#devPrompt').press_sequentially('draft before project selection')
                 assert await page.locator('#devPrompt').input_value() == 'draft before project selection'
+                assert await page.locator('#devAddImage, #devImageInput').count() == 0
+                await page.locator('#devPrompt').evaluate("""el => {
+                    const bytes = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='), c => c.charCodeAt(0));
+                    const data = new DataTransfer(); data.items.add(new File([bytes], 'clipboard.png', {type: 'image/png'}));
+                    el.dispatchEvent(new ClipboardEvent('paste', {clipboardData: data, bubbles: true, cancelable: true}));
+                }""")
+                await page.locator('#devImageDrafts img').wait_for()
                 assert not await page.evaluate("document.querySelector('#developerView').classList.contains('files-collapsed')")
                 assert await page.locator('#devSendButton').is_disabled()
                 await page.locator('#devConversation').click(position={"x":10,"y":10})
@@ -171,7 +177,9 @@ async def main():
                           "pythonApi": state["status"], "anonymousApi": 403, "shutdownCode": code,
                           "manualOnly": True, "officialRequests": len(official_requests), "automaticApiRequests": len(automation_requests), "builtinSkill": "software-development", "largeSourcePaging": True,
                           "manualToolbarLayout": toolbar_layout, "conversationClickCollapsesBrowserPanel": True,
-                          "inputClickKeepsBrowserPanel": True, "draftWithoutProject": True}
+                          "inputClickKeepsBrowserPanel": True, "draftWithoutProject": True,
+                          "clipboardImageDraftWithoutProject": True, "imagePickerRemoved": True,
+                          "manualToolbarChromeRemoved": True}
                 (output / f"app-{mode}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
                 print(json.dumps(report))
             finally:
