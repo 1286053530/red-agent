@@ -1,8 +1,19 @@
 # 安装包下载服务
 
-本地构建版本：2.1.25；公网版本：2.1.19。文档更新：2026-10-26（北京时间）。已部署下载入口：[软件下载](http://192.144.142.111:3300/)。
+本地构建版本：2.1.26；公网版本：2.1.19。文档更新：2026-10-26（北京时间）。已部署下载入口：[软件下载](http://192.144.142.111:3300/)。
 
-## 2.1.25 本地构建
+## 2.1.26 本地构建
+
+2026-10-26 已生成 Windows x64 安装版与免安装版。点击输入框或输入内容保持页面浏览展开，点击对话空白和消息仍收起右栏。未选择项目时可先输入草稿，选择项目后保留并发送。输入框、页面与图片相关回归 23 项通过；打包后端桥接及 Node/Python 自检、源码、解包桌面和实际 Portable 启动通过，包含无项目草稿、输入框点击与 280/320/360/440px 页面栏布局验证。汇总报告为 `.local/python-check/release-2.1.26.json`。未执行真实官网登录、交互安装、升级、卸载及无 Python 环境验收。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.26-x64.exe | 130309790 | `4126e3cab9dcb2454406e73bc37384ffe549719d32b45736786d769a39782a85` |
+| XiaozhuShujin-2.1.26-x64-Portable.exe | 130102362 | `984cad45a161c4f29b2d4b1ba1f4f113f7ab62773a8ea710fa4e40d4a56225fa` |
+
+产物位于 `release/`，校验清单为 `release/SHA256SUMS-2.1.26.txt`，本地下载文件位于 `.local/download-publish/releases/2.1.26/`。保留旧版产物，本次未上传公网。
+
+## 2.1.25 本地构建（历史）
 
 2026-10-26 已生成 Windows x64 安装版与免安装版。页面浏览打开时，点击任务对话空白、消息或输入框可收起右栏；点击“展开项目文件”恢复同一网页和浏览状态。页面与输入框回归 6 项、全量 Python 回归 174 项通过；打包后端自检、Electron 会话、源码/解包/实际 Portable 启动及 280/320/360/440px 页面栏布局检查通过。未执行真实官网登录、交互安装、升级、卸载及无 Python 环境验收。
 
@@ -82,7 +93,7 @@
 
 服务器需要 Linux、Python 3.8+、已运行的 Nginx 和允许执行 `sudo -n` 的 SSH 账号。密码通过 `SHUJIN_DEPLOY_PASSWORD` 环境变量读取，不接受密码命令行参数。连接软件导出的 password 可能是加密值，不能直接作为 SSH 明文密码。
 
-本机先按 [Windows 桌面与构建](../README.md#windows-桌面与构建) 执行 `npm run dist:win`。构建输出固定为仓库根目录的 `release/`，两个文件名中的版本取自 `package.json`；`scripts/prepare_downloads.py` 从这里读取安装包，并在 `.local/download-publish/releases/2.1.23/` 中组织发布文件。服务器目标目录为 `/srv/xiaozhu-downloads/releases/2.1.23/`，不要把本机构建输出改到 `release/2.1.23/`。
+本机先按 [Windows 桌面与构建](../README.md#windows-桌面与构建) 执行 `npm run dist:win`。构建输出固定为仓库根目录的 `release/`，两个文件名中的版本取自 `package.json`；`scripts/prepare_downloads.py` 从这里读取安装包，并在 `.local/download-publish/releases/2.1.26/` 中组织发布文件。服务器目标目录为 `/srv/xiaozhu-downloads/releases/2.1.26/`，不要把本机构建输出改到 `release/2.1.26/`。
 
 在准备发布文件前完成下方验收，记录本次构建的版本、时间、文件大小及 SHA-256；部署前核对待上传文件与验收文件的摘要一致。重新构建同版本时不可复用旧验收结果，下表的历史校验值也不能替代新产物的核对。
 

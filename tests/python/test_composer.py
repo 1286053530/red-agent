@@ -4,6 +4,63 @@ from playwright.async_api import async_playwright
 from conftest import ROOT, tool_call
 
 
+async def test_composer_draft_without_selected_project(workspace, live_server):
+    w, project, _, session = workspace
+    _, origin = live_server
+    w.archive_session(session['id'], True)
+    requests = []
+
+    async def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"choices": [{"message": {"tool_calls": [
+            tool_call('request_user', {'question': '确认任务范围？', 'reason': '确认预期', 'summary': '等待回答'})
+        ]}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as model, async_playwright() as playwright:
+        w.model_client = model
+        browser = await playwright.chromium.launch(channel='msedge', headless=True)
+        try:
+            page = await browser.new_page(viewport={'width': 1440, 'height': 1000})
+            await page.add_init_script("localStorage.setItem('devProject','removed-project');localStorage.setItem('devSession','removed-session');")
+            await page.goto(origin)
+            prompt = page.locator('#devPrompt')
+            await page.wait_for_function("document.querySelector('#devModelLabel').textContent==='fixture'")
+            assert await prompt.is_enabled()
+            assert await page.locator('#devSessionCount').inner_text() == '选择项目后开始'
+            assert await page.locator('[data-session-id]').count() == 1
+            assert '选择项目后发送' in await prompt.get_attribute('placeholder')
+            await page.click('#devBrowserTab')
+            await prompt.fill('检查项目中的问题')
+            await prompt.click()
+            assert not await page.evaluate("document.querySelector('#developerView').classList.contains('files-collapsed')")
+            assert await page.locator('#devSendButton').is_disabled()
+            assert await page.locator('#devSendButton').get_attribute('title') == '请先选择左侧项目'
+            await prompt.press('Enter')
+            assert not requests
+            await page.locator(f'[data-project-id="{project["id"]}"]').click()
+            assert await prompt.input_value() == '检查项目中的问题'
+            assert await prompt.is_enabled()
+            assert await page.locator('#devSendButton').is_enabled()
+            assert len(w.data['sessions']) == 1
+            await page.locator('#devSendButton').click()
+            await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='等待用户回答'")
+            assert len(requests) == 1
+            assert len(w.data['sessions']) == 2
+            assert await prompt.is_enabled()
+            assert await prompt.input_value() == ''
+            await page.locator('.dev-archived-sessions>summary').click()
+            await page.locator(f'[data-session-id="{session["id"]}"]').click()
+            assert await prompt.is_disabled()
+            await page.locator('#devNewSessionButton').click()
+            await page.wait_for_function("!document.querySelector('#devPrompt').disabled")
+            assert await prompt.is_enabled()
+            output = ROOT / '.local/composer-check'
+            output.mkdir(parents=True, exist_ok=True)
+            await page.screenshot(path=str(output / 'project-draft.png'))
+        finally:
+            await browser.close()
+
+
 async def test_composer_access_modes_control_real_task_permissions(workspace, live_server):
     w, project, _, session = workspace
     _, origin = live_server

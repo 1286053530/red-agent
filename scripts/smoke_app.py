@@ -115,6 +115,11 @@ async def main():
                 assert all(row['valid'] for row in toolbar_layout), toolbar_layout
                 await page.click("#devBrowserTab")
                 await page.wait_for_selector("#devBrowserTabPanel .dev-browser-empty")
+                await page.locator('#devPrompt').click()
+                await page.locator('#devPrompt').press_sequentially('draft before project selection')
+                assert await page.locator('#devPrompt').input_value() == 'draft before project selection'
+                assert not await page.evaluate("document.querySelector('#developerView').classList.contains('files-collapsed')")
+                assert await page.locator('#devSendButton').is_disabled()
                 await page.locator('#devConversation').click(position={"x":10,"y":10})
                 assert await page.evaluate("document.querySelector('#developerView').classList.contains('files-collapsed')")
                 await page.click("#devRestoreFiles")
@@ -165,7 +170,8 @@ async def main():
                 report = {"passed": True, "mode": mode, "bridge": bridge,
                           "pythonApi": state["status"], "anonymousApi": 403, "shutdownCode": code,
                           "manualOnly": True, "officialRequests": len(official_requests), "automaticApiRequests": len(automation_requests), "builtinSkill": "software-development", "largeSourcePaging": True,
-                          "manualToolbarLayout": toolbar_layout, "conversationClickCollapsesBrowserPanel": True}
+                          "manualToolbarLayout": toolbar_layout, "conversationClickCollapsesBrowserPanel": True,
+                          "inputClickKeepsBrowserPanel": True, "draftWithoutProject": True}
                 (output / f"app-{mode}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
                 print(json.dumps(report))
             finally:

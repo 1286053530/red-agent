@@ -189,8 +189,6 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
                 await page.wait_for_function(f'manualCalls.hide==={hides + 1}')
                 assert 'files-collapsed' in (await page.locator('#developerView').get_attribute('class') or '')
                 assert not await page.locator('#devBrowserTabPanel .manual-official').is_visible()
-                if target == '#devPrompt':
-                    assert await page.evaluate("document.activeElement.id") == 'devPrompt'
                 resumes = await page.evaluate('manualCalls.resume')
                 await page.click('#devRestoreFiles')
                 await page.wait_for_function(f'manualCalls.resume==={resumes + 1}')
@@ -199,8 +197,14 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
             await click_conversation_and_expect_browser_hidden('#devConversation')
             await page.locator('#devConversation').evaluate("element => {element.innerHTML='<article class=\"dev-chat-message user\"><div class=\"dev-message-content\">测试消息</div></article>';}")
             await click_conversation_and_expect_browser_hidden('.dev-chat-message')
-            await page.locator('#devPrompt').evaluate('element => element.disabled=false')
-            await click_conversation_and_expect_browser_hidden('#devPrompt')
+            calls_before_input = await page.evaluate('({...manualCalls})')
+            await page.locator('#devPrompt').click()
+            await page.locator('#devPrompt').press_sequentially('input draft')
+            assert await page.locator('#devPrompt').input_value() == 'input draft'
+            assert await page.evaluate("document.activeElement.id") == 'devPrompt'
+            assert 'files-collapsed' not in (await page.locator('#developerView').get_attribute('class') or '')
+            assert await page.locator('#devBrowserTabPanel .manual-official').is_visible()
+            assert await page.evaluate('manualCalls') == calls_before_input
             hides = await page.evaluate('manualCalls.hide')
             resumes = await page.evaluate('manualCalls.resume')
             await page.click('#devFilesTab')

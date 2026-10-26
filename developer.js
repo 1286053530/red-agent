@@ -105,7 +105,7 @@
     restoreFiles.classList.toggle('hidden', !filesCollapsed);
   }
   $('.dev-agent-panel').addEventListener('click', event => {
-    if (!event.target.closest('#devConversation, #devPrompt')) return;
+    if (!event.target.closest('#devConversation')) return;
     if (rightTab !== 'browser' || filesCollapsed) return;
     filesCollapsed = true;
     localStorage.setItem('devFilesCollapsed', '1');
@@ -285,7 +285,7 @@
     $('#devConversationTitle').textContent = state.session?.title || (project ? '新开发会话' : '开发 Agent');
     $('#devConversationTitle').title = $('#devConversationTitle').textContent;
     $('#devNewSessionButton').disabled = !project;
-    $('#devPrompt').disabled = !project || state.busy || sending || !!state.session?.archivedAt;
+    $('#devPrompt').disabled = state.busy || sending || !!state.session?.archivedAt;
     $('#devAgentStatus').textContent = state.session?.archivedAt ? '已归档 · 可恢复后继续' : statusLabel(state.session?.status || 'idle');
     $('#devComposerHint').textContent = !project ? '请先导入一个项目' : state.busy ? 'Agent 正在处理任务…' : state.providers.length ? 'Enter 发送 · Shift + Enter 换行' : '请先配置模型';
     $('#devSessionCount').textContent = project ? `${state.sessions.filter(s => s.projectId === project.id && !s.archivedAt).length} 个会话` : '选择项目后开始';
@@ -317,9 +317,10 @@
     $('#devSendButton').classList.toggle('hidden', !hasText);
     const awaiting = state.session?.status === 'awaiting_user';
     $('#devSendButton').setAttribute('aria-label', awaiting ? '回答并继续' : '发送');
-    $('#devPrompt').placeholder = awaiting ? '回答当前问题，继续此任务…' : '描述你想完成的开发任务…';
+    $('#devPrompt').placeholder = awaiting ? '回答当前问题，继续此任务…' : !state.projectId ? '描述你想完成的开发任务，选择项目后发送…' : '描述你想完成的开发任务…';
     if ($('#devResumeTask') && awaiting) $('#devResumeTask').disabled = !hasText || addingImages || sending || !!state.session?.archivedAt;
     $('#devSendButton').disabled = !hasText || !state.projectId || !$('#devModelSelect').value || state.busy || addingImages || sending || !!state.session?.archivedAt;
+    $('#devSendButton').title = !state.projectId ? (state.projects.length ? '请先选择左侧项目' : '请先导入本地项目') : awaiting ? '回答并继续' : '发送';
     $('#devAddImage').disabled = !state.projectId || state.busy || addingImages || sending || !!state.session?.archivedAt;
   }
   function resizePrompt() {
