@@ -125,6 +125,7 @@
 
 - [README：运行与使用](../README.md)
 - [2.1 系列开发过程](DEVELOPMENT_2.1.md)
+- [2026-10-26 开发日志](DEVELOPMENT_LOG_2026-10-26.md)
 - [下载部署、校验与运维](DOWNLOAD_DEPLOYMENT.md)
 - [前端布局与视觉约定](FRONTEND_DESIGN.md)
 - [手动内嵌官网说明](MANUAL_EMBEDDED_ACCESS.md)
