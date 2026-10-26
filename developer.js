@@ -8,6 +8,7 @@
     if (!response.ok) throw new Error(data.error || '请求失败，请重试。'); return data;
   };
   const state = { skills: [], projects: [], providers: [], sessions: [], projectId: localStorage.getItem('devProject') || '', sessionId: localStorage.getItem('devSession') || '', files: [], file: '', session: null, busy: false };
+  let draftImages = [], addingImages = false, sending = false, draftGeneration = 0;
   let pollGeneration = 0, pollingId = '', settingsTrigger;
   const rememberSelection = () => { localStorage.setItem('devProject', state.projectId); localStorage.setItem('devSession', state.sessionId); };
   const root = $('#developerView');
@@ -21,18 +22,31 @@
 
   root.innerHTML = `
     <div class="dev-workbench" id="devWorkbench">
-      <section class="dev-agent-panel"><div class="dev-agent-heading"><div class="dev-agent-avatar">${icon('spark')}</div><div><strong id="devConversationTitle">开发 Agent</strong><small id="devAgentStatus"><i></i>准备就绪</small></div><button class="dev-panel-more" id="devSettingsQuick" aria-label="模型设置">···</button></div><div class="dev-agent-info"><span class="dev-agent-project-icon">{ }</span><div><strong id="devAgentProjectName">尚未选择项目</strong><small id="devAgentProviderStatus">配置模型以开始</small></div></div><div class="dev-skill-bar"><label for="devSkillSelect">开发 Skill</label><select id="devSkillSelect"><option value="software-development">软件开发 · 内置</option></select><button id="devViewSkill" type="button">查看指引</button></div><details class="dev-skill-details" id="devSkillDetails"><summary>Skill 说明</summary><p id="devSkillDescription">新任务默认使用内置软件开发流程。</p><pre id="devSkillContent" class="hidden"></pre></details><div id="devConversation" class="dev-conversation"><div class="dev-empty-agent"><span class="dev-agent-spark">✳</span><strong>你好，我是你的开发 Agent</strong><p>我可以先阅读项目源码，帮你梳理结构、定位问题并提出代码修改。可逐项审核修改和检查命令，也可为本次任务授权持续执行。</p><div class="dev-agent-suggestions"><button data-dev-prompt="请先浏览项目文件，总结项目结构、使用的技术栈和主要入口文件。">梳理项目结构 ${icon('arrow')}</button><button data-dev-prompt="阅读项目的 README 和主要源码，说明如何运行项目，并指出最值得优先改进的地方。">阅读项目并给出建议 ${icon('arrow')}</button></div></div></div><div id="devExecution" class="dev-execution"></div><div id="devPendingChanges" class="dev-pending-list"></div><div class="dev-model-row"><label for="devModelSelect">执行模型</label><select id="devModelSelect"><option value="">添加模型后可开始</option></select><button id="devManageModel" class="dev-plain-button">配置</button></div><details class="dev-task-options"><summary>任务标准与执行权限</summary><label>任务类型<select id="devTaskKind"><option value="auto">自动识别（审查默认只读）</option><option value="change">代码修改与验证</option><option value="inspect">只读分析</option></select></label><label>完成标准<input id="devAcceptance" maxlength="4000" placeholder="例如：修复空输入报错，原有测试继续通过"></label><label class="dev-permission"><input type="checkbox" id="devAllowEdits">本次任务自动应用源码修改（保留恢复记录）</label><label class="dev-permission"><input type="checkbox" id="devAllowCommands">本次任务允许运行项目检查</label><small>未授权的动作会逐项审核。项目检查会执行本机代码，请仅对可信项目授权。</small></details><form class="dev-composer" id="devComposer"><textarea id="devPrompt" rows="2" maxlength="16000" placeholder="描述你想完成的开发任务…" disabled></textarea><div class="dev-composer-bottom"><span id="devComposerHint">请先导入一个项目</span><div><button type="button" id="devStopButton" class="dev-stop-button hidden">停止</button><button type="submit" id="devSendButton" class="dev-send-button hidden" disabled aria-label="发送">${icon('send')}</button></div></div></form><div id="devError" class="dev-inline-error hidden" role="alert"></div></section>
+      <section class="dev-agent-panel"><div class="dev-agent-heading"><div class="dev-agent-avatar">${icon('spark')}</div><div><strong id="devConversationTitle">开发 Agent</strong><small id="devAgentStatus"><i></i>准备就绪</small></div><button class="dev-panel-more" id="devSettingsQuick" aria-label="模型设置">···</button></div><div class="dev-agent-info"><span class="dev-agent-project-icon">{ }</span><div><strong id="devAgentProjectName">尚未选择项目</strong><small id="devAgentProviderStatus">配置模型以开始</small></div></div><div class="dev-skill-bar"><label for="devSkillSelect">开发 Skill</label><select id="devSkillSelect"><option value="software-development">软件开发 · 内置</option></select><button id="devViewSkill" type="button">查看指引</button></div><details class="dev-skill-details" id="devSkillDetails"><summary>Skill 说明</summary><p id="devSkillDescription">新任务默认使用内置软件开发流程。</p><pre id="devSkillContent" class="hidden"></pre></details><div id="devConversation" class="dev-conversation"><div class="dev-empty-agent"><span class="dev-agent-spark">✳</span><strong>你好，我是你的开发 Agent</strong><p>我可以先阅读项目源码，帮你梳理结构、定位问题并提出代码修改。可逐项审核修改和检查命令，也可为本次任务授权持续执行。</p><div class="dev-agent-suggestions"><button data-dev-prompt="请先浏览项目文件，总结项目结构、使用的技术栈和主要入口文件。">梳理项目结构 ${icon('arrow')}</button><button data-dev-prompt="阅读项目的 README 和主要源码，说明如何运行项目，并指出最值得优先改进的地方。">阅读项目并给出建议 ${icon('arrow')}</button></div></div></div><div id="devExecution" class="dev-execution"></div><div id="devPendingChanges" class="dev-pending-list"></div><div class="dev-model-row"><label for="devModelSelect">执行模型</label><select id="devModelSelect"><option value="">添加模型后可开始</option></select><button id="devManageModel" class="dev-plain-button">配置</button></div><details class="dev-task-options"><summary>任务标准与执行权限</summary><label>任务类型<select id="devTaskKind"><option value="auto">自动识别（审查默认只读）</option><option value="change">代码修改与验证</option><option value="inspect">只读分析</option></select></label><label>完成标准<input id="devAcceptance" maxlength="4000" placeholder="例如：修复空输入报错，原有测试继续通过"></label><label class="dev-permission"><input type="checkbox" id="devAllowEdits">本次任务自动应用源码修改（保留恢复记录）</label><label class="dev-permission"><input type="checkbox" id="devAllowCommands">本次任务允许运行项目检查</label><small>未授权的动作会逐项审核。项目检查会执行本机代码，请仅对可信项目授权。文件与网络未隔离，详见访问范围。</small></details><form class="dev-composer" id="devComposer"><textarea id="devPrompt" rows="2" maxlength="16000" placeholder="描述你想完成的开发任务…" disabled></textarea><div class="dev-composer-bottom"><span id="devComposerHint">请先导入一个项目</span><div><button type="button" id="devStopButton" class="dev-stop-button hidden">停止</button><button type="submit" id="devSendButton" class="dev-send-button hidden" disabled aria-label="发送">${icon('send')}</button></div></div></form><div id="devError" class="dev-inline-error hidden" role="alert"></div></section>
       <section class="dev-editor-area"><div class="dev-editor-toolbar"><div class="dev-breadcrumb" id="devEditorTitle">项目文件 <span>/</span> 选择文件</div><div class="dev-editor-tools"><span class="dev-editor-language" id="devFileType">SOURCE</span><button class="dev-plain-button" id="devRefreshFiles">${icon('refresh')}刷新</button></div></div><div class="dev-code-layout"><aside class="dev-file-tree" id="devFileTree"><div class="dev-tree-label">项目文件</div><div class="dev-empty-files">导入项目以浏览源码</div></aside><div class="dev-file-preview" id="devFilePreview"><div class="dev-code-empty"><span class="dev-empty-icon">{ }</span><strong>项目代码，尽在掌握</strong><p>导入本地项目后，可以浏览源码或让 Agent 帮你分析代码结构。</p><button class="primary-button" id="devEmptyImport">${icon('plus')}导入本地项目</button></div></div></div></section></div>
     <div class="dev-bottom-strip"><span>${icon('check')} 模型 API Key 加密保存在本机</span><span>执行检查 → 反馈纠错 → 证据验收</span><button id="devBottomSettings">配置接入模型 ${icon('arrow')}</button></div>
-    <div class="dev-modal-backdrop hidden" id="devSettingsModal" role="presentation"><div class="dev-settings-modal" role="dialog" aria-modal="true" aria-labelledby="devSettingsTitle"><div class="dev-modal-title"><div><div class="eyebrow"><span class="eyebrow-line"></span> MODEL PROVIDERS</div><h2 id="devSettingsTitle">模型接入设置</h2></div><button id="devCloseSettings" class="dev-square-button" aria-label="关闭">×</button></div><p class="dev-modal-description">接入兼容 OpenAI Chat Completions 的模型服务或 Anthropic Messages API。需要你自备 API Key 与模型权限。执行任务时，任务描述和 Agent 读取的源码将发送给所选模型服务。</p><div id="devSettingsError" class="dev-inline-error hidden" role="alert"></div><div id="devProviderList" class="dev-provider-list"></div><form id="devProviderForm" class="dev-provider-form"><input type="hidden" id="devProviderId"><label>配置名称<input id="devProviderName" maxlength="60" placeholder="如 DeepSeek 主力模型" required></label><label>接口协议<select id="devProviderProtocol"><option value="compatible">OpenAI 兼容接口</option><option value="anthropic">Anthropic Messages API</option></select></label><label class="dev-provider-wide">Base URL<input id="devProviderUrl" type="url" placeholder="https://api.deepseek.com/v1" required></label><label>模型名称<input id="devProviderModel" maxlength="150" placeholder="deepseek-chat" required></label><label>API Key<input id="devProviderKey" type="password" autocomplete="new-password" placeholder="sk-…（保留当前密钥请留空）"></label><div class="dev-provider-actions"><button type="button" class="secondary-button" id="devProviderCancel">取消</button><button type="submit" class="primary-button" id="devProviderSave">保存模型</button></div></form><div class="dev-modal-footer"><span>${icon('check')} 密钥使用本机密钥加密后存储</span><button type="button" id="devAddProvider">${icon('plus')}添加模型配置</button></div></div></div>`;
+    <div class="dev-modal-backdrop hidden" id="devSettingsModal" role="presentation"><div class="dev-settings-modal" role="dialog" aria-modal="true" aria-labelledby="devSettingsTitle"><div class="dev-modal-title"><div><div class="eyebrow"><span class="eyebrow-line"></span> MODEL PROVIDERS</div><h2 id="devSettingsTitle">模型接入设置</h2></div><button id="devCloseSettings" class="dev-square-button" aria-label="关闭">×</button></div><p class="dev-modal-description">接入 OpenAI Chat Completions、Responses 或 Anthropic Messages API。需要你自备 API Key 与模型权限。执行任务时，任务描述、添加的图片和 Agent 读取的源码将发送给所选模型服务。图片输入需要模型支持视觉能力。</p><div id="devSettingsError" class="dev-inline-error hidden" role="alert"></div><div id="devProviderList" class="dev-provider-list"></div><form id="devProviderForm" class="dev-provider-form"><input type="hidden" id="devProviderId"><label>配置名称<input id="devProviderName" maxlength="60" placeholder="如 DeepSeek 主力模型" required></label><label>接口协议<select id="devProviderProtocol"><option value="compatible">OpenAI Chat Completions</option><option value="responses">OpenAI Responses API</option><option value="anthropic">Anthropic Messages API</option></select></label><label class="dev-provider-wide">Base URL<input id="devProviderUrl" type="url" placeholder="https://api.deepseek.com/v1" required></label><label>模型名称<input id="devProviderModel" maxlength="150" placeholder="deepseek-chat" required></label><label>API Key<input id="devProviderKey" type="password" autocomplete="new-password" placeholder="sk-…（保留当前密钥请留空）"></label><div class="dev-provider-actions"><button type="button" class="secondary-button" id="devProviderCancel">取消</button><button type="submit" class="primary-button" id="devProviderSave">保存模型</button></div></form><div class="dev-modal-footer"><span>${icon('check')} 密钥使用本机密钥加密后存储</span><button type="button" id="devAddProvider">${icon('plus')}添加模型配置</button></div></div></div>`;
 
   const composerTools = document.createElement('div');
   composerTools.className = 'dev-composer-tools';
   composerTools.innerHTML = '<details id="devAccessPicker" class="dev-composer-picker"><summary aria-label="访问权限"><svg class="icon" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"/></svg><span id="devAccessLabel">逐项审核</span><span class="dev-picker-chevron">⌄</span></summary><div class="dev-picker-popover"><strong>访问权限</strong><div class="dev-access-modes" role="radiogroup" aria-label="访问权限模式"><label><input type="radio" name="devAccessMode" value="readonly"><span>只读分析<small>仅阅读源码，不修改或运行代码</small></span></label><label><input type="radio" name="devAccessMode" value="review" checked><span>逐项审核<small>修改和检查命令逐项确认</small></span></label><label><input type="radio" name="devAccessMode" value="automatic"><span>自动执行<small>允许应用修改、运行受支持的检查</small></span></label></div><p>权限仅对下一次新任务生效；当前任务权限保持不变。自动执行仍受已导入目录和命令范围限制。</p><div id="devAdvancedOptions"></div></div></details><details id="devModelPicker" class="dev-composer-picker"><summary aria-label="选择模型"><span id="devModelLabel">未配置模型</span><span class="dev-picker-chevron">⌄</span></summary><div class="dev-picker-popover"><strong>执行模型</strong><div id="devModelOptions"></div></div></details>';
   const composerFooter = $('.dev-composer-bottom');
+  $('#devPrompt').insertAdjacentHTML('beforebegin', '<div id="devImageDrafts" class="dev-image-drafts hidden" aria-label="待发送的图片"></div><input id="devImageInput" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>');
+  root.insertAdjacentHTML('beforeend', '<dialog id="devImageViewer" class="dev-image-viewer" aria-label="查看图片"><form method="dialog"><button aria-label="关闭图片">×</button></form><img alt=""></dialog>');
+  $('#devConversation').addEventListener('click', event => {
+    const button = event.target.closest('[data-view-image]');
+    if (!button) return;
+    const image = button.querySelector('img'), viewer = $('#devImageViewer');
+    viewer.querySelector('img').src = image.src;
+    viewer.querySelector('img').alt = image.alt;
+    viewer.showModal();
+  });
+  composerTools.insertAdjacentHTML('afterbegin', '<button type="button" id="devAddImage" class="dev-attach-button" aria-label="添加图片" title="添加图片（也可粘贴或拖入）"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 5 5 3-3 4 4"/></svg></button>');
   composerFooter.insertBefore(composerTools, composerFooter.lastElementChild);
   $('#devModelOptions').append($('.dev-model-row'));
   $('#devAdvancedOptions').append($('.dev-task-options'));
+  $('#devAdvancedOptions').insertAdjacentHTML('beforebegin', '<details id="devAccessScope"><summary>目录、命令、联网与敏感配置范围</summary><div id="devAccessScopeBody"></div></details>');
+  $('#devAccessPicker .dev-picker-popover>p').textContent = '权限仅对下一次新任务生效；当前任务的实际权限显示在任务轨迹中。自动执行只减少审批，项目检查进程没有文件或网络隔离。';
   $('#devManageModel').type = 'button';
   const pickers = [$('#devAccessPicker'), $('#devModelPicker')];
   function closeComposerPickers() { pickers.forEach(picker=>{picker.open=false;}); }
@@ -90,6 +104,14 @@
     restoreFiles.setAttribute('aria-expanded', String(!filesCollapsed));
     restoreFiles.classList.toggle('hidden', !filesCollapsed);
   }
+  $('.dev-agent-panel').addEventListener('click', event => {
+    if (!event.target.closest('#devConversation, #devPrompt')) return;
+    if (rightTab !== 'browser' || filesCollapsed) return;
+    filesCollapsed = true;
+    localStorage.setItem('devFilesCollapsed', '1');
+    applyPanelLayout();
+    document.dispatchEvent(new Event('workspace:right-panel'));
+  });
   applyPanelLayout();
   const filesTabPanel = document.createElement('section');
   filesTabPanel.id = 'devFilesTabPanel';
@@ -103,27 +125,89 @@
   traceTabPanel.setAttribute('role', 'tabpanel');
   traceTabPanel.setAttribute('aria-labelledby', 'devTraceTab');
   traceTabPanel.append($('#devExecution'));
+  const browserTabPanel = document.createElement('section');
+  browserTabPanel.id = 'devBrowserTabPanel';
+  browserTabPanel.className = 'dev-browser-tabpanel hidden';
+  browserTabPanel.setAttribute('role', 'tabpanel');
+  browserTabPanel.setAttribute('aria-labelledby', 'devBrowserTab');
+  browserTabPanel.innerHTML = '<div class="dev-browser-empty"><strong>小红书小窗</strong><p>在这里浏览小红书，同时继续 Agent 任务。</p><a class="primary-button" href="https://www.xiaohongshu.com/explore" target="_blank" rel="noopener noreferrer" data-open-xhs data-xhs-mode="mini">打开小红书</a></div>';
   const rightTabs = document.createElement('div');
   rightTabs.className = 'dev-right-tabs';
-  rightTabs.innerHTML = '<div role="tablist" aria-label="项目与任务"><button id="devFilesTab" role="tab" aria-controls="devFilesTabPanel" aria-selected="true">项目文件</button><button id="devTraceTab" role="tab" aria-controls="devTraceTabPanel" aria-selected="false" tabindex="-1">任务轨迹</button></div>';
+  rightTabs.innerHTML = '<div role="tablist" aria-label="项目与任务"><button id="devFilesTab" role="tab" aria-controls="devFilesTabPanel" aria-selected="true">项目文件</button><button id="devTraceTab" role="tab" aria-controls="devTraceTabPanel" aria-selected="false" tabindex="-1">任务轨迹</button><button id="devBrowserTab" role="tab" aria-controls="devBrowserTabPanel" aria-selected="false" tabindex="-1">页面浏览</button></div>';
   rightTabs.prepend(filesToggle);
-  filesPanel.append(rightTabs, filesTabPanel, traceTabPanel);
+  filesPanel.append(rightTabs, filesTabPanel, traceTabPanel, browserTabPanel);
   let rightTab = 'files';
   function selectRightTab(tab) {
     rightTab = tab;
-    for (const [name, button, panel] of [['files', $('#devFilesTab'), filesTabPanel], ['trace', $('#devTraceTab'), traceTabPanel]]) {
+    for (const [name, button, panel] of [['files', $('#devFilesTab'), filesTabPanel], ['trace', $('#devTraceTab'), traceTabPanel], ['browser', $('#devBrowserTab'), browserTabPanel]]) {
       button.setAttribute('aria-selected', String(tab === name));
       button.tabIndex = tab === name ? 0 : -1;
       panel.classList.toggle('hidden', tab !== name);
     }
+    document.dispatchEvent(new Event('workspace:right-panel'));
   }
   rightTabs.addEventListener('keydown', event => {
     if (event.target.getAttribute('role') === 'tab' && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
       event.preventDefault();
-      selectRightTab(event.key === 'Home' ? 'files' : event.key === 'End' ? 'trace' : rightTab === 'files' ? 'trace' : 'files');
-      $(rightTab === 'files' ? '#devFilesTab' : '#devTraceTab').focus();
+      const tabs = ['files', 'trace', 'browser'];
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? 2 : (tabs.indexOf(rightTab) + (event.key === 'ArrowRight' ? 1 : 2)) % 3;
+      selectRightTab(tabs[next]);
+      rightTabs.querySelector('[aria-selected="true"]').focus();
     }
   });
+  const workbench = $('#devWorkbench');
+  const rightResize = document.createElement('div');
+  rightResize.id = 'devRightResize';
+  rightResize.className = 'dev-right-resize';
+  rightResize.tabIndex = 0;
+  rightResize.setAttribute('role', 'separator');
+  rightResize.setAttribute('aria-orientation', 'vertical');
+  rightResize.setAttribute('aria-label', '调整右侧页面栏宽度');
+  rightResize.setAttribute('aria-controls', 'devFilesPanel');
+  rightResize.title = '左右拖动调整宽度；双击恢复默认宽度';
+  workbench.insertBefore(rightResize, filesPanel);
+  let preferredRightWidth = Number(localStorage.getItem('devRightPanelWidth')) || 0, rightDrag;
+  function updateRightWidth(width, remember = false) {
+    const maximum = Math.max(280, workbench.getBoundingClientRect().width - (innerWidth > 1100 ? 340 : 300) - 8);
+    const effective = Math.round(Math.max(280, Math.min(maximum, width)));
+    if (width) workbench.style.setProperty('--dev-right-track', effective + 'px');
+    else workbench.style.removeProperty('--dev-right-track');
+    rightResize.setAttribute('aria-valuemin', '280');
+    rightResize.setAttribute('aria-valuemax', String(Math.floor(maximum)));
+    rightResize.setAttribute('aria-valuenow', String(Math.round(filesPanel.getBoundingClientRect().width)));
+    if (remember) {
+      preferredRightWidth = width ? effective : 0;
+      if (width) localStorage.setItem('devRightPanelWidth', String(effective));
+      else localStorage.removeItem('devRightPanelWidth');
+    }
+  }
+  rightResize.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    rightDrag = { x: event.clientX, width: filesPanel.getBoundingClientRect().width };
+    rightResize.setPointerCapture(event.pointerId);
+    document.body.classList.add('right-panel-resizing');
+    document.dispatchEvent(new Event('workspace:right-panel'));
+  });
+  rightResize.addEventListener('pointermove', event => {
+    if (rightDrag) updateRightWidth(rightDrag.width + rightDrag.x - event.clientX);
+  });
+  const finishRightDrag = () => {
+    if (!rightDrag) return;
+    updateRightWidth(filesPanel.getBoundingClientRect().width, true);
+    rightDrag = null;
+    document.body.classList.remove('right-panel-resizing');
+    document.dispatchEvent(new Event('workspace:right-panel'));
+  };
+  for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) rightResize.addEventListener(name, finishRightDrag);
+  rightResize.addEventListener('dblclick', () => updateRightWidth(0, true));
+  rightResize.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
+    event.preventDefault();
+    updateRightWidth(event.key === 'Home' ? 0 : filesPanel.getBoundingClientRect().width + (event.key === 'ArrowLeft' ? 16 : -16), true);
+  });
+  new ResizeObserver(() => updateRightWidth(preferredRightWidth)).observe(workbench);
+  updateRightWidth(preferredRightWidth);
   const toast = message => window.showToast ? showToast(message) : void 0;
   const setError = message => { const box = $('#devSettingsModal').classList.contains('hidden') ? $('#devError') : $('#devSettingsError'); box.textContent = message || ''; box.classList.toggle('hidden', !message); };
   const openSettings = () => { settingsTrigger = $('#devModelPicker summary'); closeComposerPickers(); $('#devSettingsModal').classList.remove('hidden'); renderProviders(); $('#devCloseSettings').focus(); };
@@ -201,7 +285,7 @@
     $('#devConversationTitle').textContent = state.session?.title || (project ? '新开发会话' : '开发 Agent');
     $('#devConversationTitle').title = $('#devConversationTitle').textContent;
     $('#devNewSessionButton').disabled = !project;
-    $('#devPrompt').disabled = !project || state.busy || !!state.session?.archivedAt;
+    $('#devPrompt').disabled = !project || state.busy || sending || !!state.session?.archivedAt;
     $('#devAgentStatus').textContent = state.session?.archivedAt ? '已归档 · 可恢复后继续' : statusLabel(state.session?.status || 'idle');
     $('#devComposerHint').textContent = !project ? '请先导入一个项目' : state.busy ? 'Agent 正在处理任务…' : state.providers.length ? 'Enter 发送 · Shift + Enter 换行' : '请先配置模型';
     $('#devSessionCount').textContent = project ? `${state.sessions.filter(s => s.projectId === project.id && !s.archivedAt).length} 个会话` : '选择项目后开始';
@@ -228,30 +312,121 @@
     if (select.value) localStorage.setItem('devSelectedProvider', select.value);
   }
   function updateSendButton() {
-    const hasText = !!$('#devPrompt').value.trim();
+    resizePrompt();
+    const hasText = !!$('#devPrompt').value.trim() || draftImages.length > 0;
     $('#devSendButton').classList.toggle('hidden', !hasText);
     const awaiting = state.session?.status === 'awaiting_user';
     $('#devSendButton').setAttribute('aria-label', awaiting ? '回答并继续' : '发送');
     $('#devPrompt').placeholder = awaiting ? '回答当前问题，继续此任务…' : '描述你想完成的开发任务…';
-    if ($('#devResumeTask') && awaiting) $('#devResumeTask').disabled = !hasText || !!state.session?.archivedAt;
-    $('#devSendButton').disabled = !hasText || !state.projectId || !$('#devModelSelect').value || state.busy || !!state.session?.archivedAt;
+    if ($('#devResumeTask') && awaiting) $('#devResumeTask').disabled = !hasText || addingImages || sending || !!state.session?.archivedAt;
+    $('#devSendButton').disabled = !hasText || !state.projectId || !$('#devModelSelect').value || state.busy || addingImages || sending || !!state.session?.archivedAt;
+    $('#devAddImage').disabled = !state.projectId || state.busy || addingImages || sending || !!state.session?.archivedAt;
   }
+  function resizePrompt() {
+    const prompt = $('#devPrompt');
+    if (!prompt.getClientRects().length) return;
+    const scrollTop = prompt.scrollTop;
+    prompt.style.overflowY = 'hidden';
+    prompt.style.height = 'auto';
+    prompt.style.height = prompt.scrollHeight + 'px';
+    prompt.style.overflowY = prompt.scrollHeight > prompt.clientHeight ? 'auto' : 'hidden';
+    prompt.scrollTop = scrollTop;
+  }
+  function clearImages() {
+    draftGeneration++;
+    draftImages = [];
+    renderImageDrafts();
+  }
+  function renderImageDrafts() {
+    const target = $('#devImageDrafts');
+    target.classList.toggle('hidden', !draftImages.length);
+    target.innerHTML = draftImages.map((image, index) => `<figure><img src="${image.dataUrl}" alt="${escapeHtml(image.name)}"><figcaption>${escapeHtml(image.name)}</figcaption><button type="button" data-remove-image="${index}" aria-label="移除图片 ${escapeHtml(image.name)}">×</button></figure>`).join('');
+    updateSendButton();
+  }
+  function renderMessageImages(images, sessionId) {
+    if (!images?.length) return '';
+    return '<div class="dev-message-images">' + images.map(image => {
+      const url = `/api/dev/sessions/${encodeURIComponent(sessionId)}/images/${encodeURIComponent(image.id)}`;
+      return `<button type="button" data-view-image aria-label="查看图片 ${escapeHtml(image.name)}"><img src="${url}" alt="${escapeHtml(image.name)}" loading="lazy"></button>`;
+    }).join('') + '</div>';
+  }
+  async function addImages(files) {
+    if (!files.length || addingImages || sending || state.busy || !state.projectId || state.session?.archivedAt) return;
+    const generation = draftGeneration;
+    addingImages = true; updateSendButton();
+    try {
+      if (files.length + draftImages.length > 4) throw new Error('每条消息最多添加 4 张图片。');
+      if (files.some(file => !['image/png', 'image/jpeg', 'image/webp'].includes(file.type))) throw new Error('仅支持 PNG、JPEG 和 WebP 图片。');
+      if (files.some(file => file.size > 5 * 1024 * 1024)) throw new Error('单张图片不能超过 5 MB。');
+      if ([...files, ...draftImages].reduce((sum, file) => sum + file.size, 0) > 12 * 1024 * 1024) throw new Error('每条消息图片合计不能超过 12 MB。');
+      const images = await Promise.all(files.map(async file => {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('无法读取图片，请重新选择。'));
+          reader.readAsDataURL(file);
+        });
+        await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = resolve;
+          image.onerror = () => reject(new Error('图片无法打开，请选择有效图片。'));
+          image.src = dataUrl;
+        });
+        return {name: file.name || '粘贴的图片.png', dataUrl, size: file.size};
+      }));
+      if (generation !== draftGeneration) return;
+      draftImages.push(...images); renderImageDrafts(); setError('');
+    } catch (error) { if (generation === draftGeneration) setError(error.message); }
+    finally { addingImages = false; $('#devImageInput').value = ''; updateSendButton(); }
+  }
+  $('#devAddImage').addEventListener('click', () => $('#devImageInput').click());
+  $('#devImageInput').addEventListener('change', event => { void addImages([...event.target.files]); });
+  $('#devImageDrafts').addEventListener('click', event => {
+    const button = event.target.closest('[data-remove-image]');
+    if (!button || sending || state.busy || addingImages) return;
+    draftImages.splice(Number(button.dataset.removeImage), 1); renderImageDrafts();
+  });
+  $('#devPrompt').addEventListener('paste', event => {
+    const files = [...(event.clipboardData?.files || [])];
+    if (!files.length) return;
+    event.preventDefault(); void addImages(files);
+  });
+  $('#devComposer').addEventListener('dragover', event => {
+    if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
+  });
+  $('#devComposer').addEventListener('drop', event => {
+    if (!event.dataTransfer?.files.length) return;
+    event.preventDefault(); void addImages([...event.dataTransfer.files]);
+  });
   function renderModelLabel() {
     const provider = state.providers.find(p=>p.id===$('#devModelSelect').value);
     $('#devModelLabel').textContent = provider?.model || '未配置模型';
     $('#devModelPicker summary').title = provider ? `${provider.name} · ${provider.model}` : '选择或配置模型';
+    renderAccessPolicy();
+  }
+  function accessScopeHtml(scope, policy) {
+    if (!policy) return '<p>正在读取后端权限范围…</p>';
+    const labels={directories:'目录',commands:'命令',network:'联网',sensitive:'敏感配置',process:'进程执行范围'};
+    return `<p>项目目录：${escapeHtml(scope?.root || '尚未选择项目')}</p><p>模型数据发送地址：${escapeHtml(scope?.model?.baseUrl || '尚未选择模型')}</p>${Object.entries(labels).map(([key,label])=>`<p><b>${label}：</b>${escapeHtml(policy[key])}</p>`).join('')}`;
+  }
+  function renderAccessPolicy() {
+    const project=state.projects.find(p=>p.id===state.projectId), provider=state.providers.find(p=>p.id===$('#devModelSelect').value);
+    $('#devAccessScopeBody').innerHTML=accessScopeHtml({root:project?.path,model:provider},state.accessPolicy);
   }
   function renderAccessControl() {
     const readOnly = $('#devTaskKind').value === 'inspect';
+    if(readOnly){$('#devAllowEdits').checked=false;$('#devAllowCommands').checked=false;}
     const edits = $('#devAllowEdits').checked, commands = $('#devAllowCommands').checked;
     const mode = readOnly ? 'readonly' : edits && commands ? 'automatic' : !edits && !commands ? 'review' : 'custom';
     composerTools.dataset.access=mode;
     $('#devAccessLabel').textContent = {readonly:'只读分析',review:'逐项审核',automatic:'自动执行',custom:'自定义权限'}[mode];
     composerTools.querySelectorAll('[name="devAccessMode"]').forEach(input=>{input.checked=input.value===mode;input.disabled=state.busy;});
-    ['#devTaskKind','#devAllowEdits','#devAllowCommands'].forEach(selector=>{$(selector).disabled=state.busy;});
+    $('#devTaskKind').disabled=state.busy;
+    ['#devAllowEdits','#devAllowCommands'].forEach(selector=>{$(selector).disabled=state.busy||readOnly;});
+    renderAccessPolicy();
   }
   function renderProviders() {
-    $('#devProviderList').innerHTML = state.providers.length ? state.providers.map(p => `<article class="dev-provider-card"><div class="dev-provider-card-icon">${p.protocol === 'anthropic' ? 'A' : 'AI'}</div><div class="dev-provider-card-body"><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.model)} · ${p.protocol === 'anthropic' ? 'Anthropic API' : 'OpenAI 兼容接口'}</small><span>${escapeHtml(p.baseUrl)} · ${p.hasKey ? 'API Key 已加密' : '未配置 API Key'}</span></div><div class="dev-provider-card-actions"><button data-edit-provider="${escapeHtml(p.id)}">编辑</button><button data-test-provider="${escapeHtml(p.id)}">测试连接</button><button class="dev-provider-delete" data-delete-provider="${escapeHtml(p.id)}" aria-label="删除 ${escapeHtml(p.name)}">删除</button></div></article>`).join('') : '<div class="dev-provider-empty"><strong>还没有模型配置</strong><span>添加模型厂商并填写 Base URL、模型名称和 API Key。</span></div>';
+    $('#devProviderList').innerHTML = state.providers.length ? state.providers.map(p => `<article class="dev-provider-card"><div class="dev-provider-card-icon">${p.protocol === 'anthropic' ? 'A' : 'AI'}</div><div class="dev-provider-card-body"><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.model)} · ${p.protocol === 'anthropic' ? 'Anthropic API' : p.protocol === 'responses' ? 'OpenAI Responses API' : 'OpenAI Chat Completions'}</small><span>${escapeHtml(p.baseUrl)} · ${p.hasKey ? 'API Key 已加密' : '未配置 API Key'}</span></div><div class="dev-provider-card-actions"><button data-edit-provider="${escapeHtml(p.id)}">编辑</button><button data-test-provider="${escapeHtml(p.id)}">测试连接</button><button class="dev-provider-delete" data-delete-provider="${escapeHtml(p.id)}" aria-label="删除 ${escapeHtml(p.name)}">删除</button></div></article>`).join('') : '<div class="dev-provider-empty"><strong>还没有模型配置</strong><span>添加模型厂商并填写 Base URL、模型名称和 API Key。</span></div>';
   }
   function resetProviderForm() {
     $('#devProviderForm').reset(); $('#devProviderId').value = ''; $('#devProviderKey').required = false;
@@ -272,6 +447,7 @@
   async function loadState() {
     try {
       const next = await api('state'); state.skills = next.skills || []; state.projects = next.projects; state.providers = next.providers; state.sessions = next.sessions;
+      state.accessPolicy = next.accessPolicy;
       if (state.projectId && !state.projects.some(p => p.id === state.projectId)) state.projectId = '';
       if (state.sessionId && !state.sessions.some(s => s.id === state.sessionId && s.projectId === state.projectId)) state.sessionId = '';
       if (!state.sessionId) { state.session = null; state.busy = false; }
@@ -396,8 +572,9 @@
       previewPage.loading = false; $('#devFilePreview').querySelectorAll('[data-file-more]').forEach(button => button.disabled = false); setError(error.message);
     }
   }
-  async function createSession() {
+  async function createSession(preserveDraft = false) {
     if (!state.projectId) return;
+    if (!preserveDraft) clearImages();
     const projectId = state.projectId;
     try { const session = await api('sessions', { projectId }); if (projectId !== state.projectId) return; state.sessionId = session.id; rememberSelection(); await loadSession(session.id); $('#devPrompt').focus(); }
     catch (error) { setError(error.message); }
@@ -414,12 +591,12 @@
     if (!session || !session.messages.length) {
       container.innerHTML = `<div class="dev-empty-agent"><span class="dev-agent-spark">✳</span><strong>${state.projectId ? '你好，我是你的开发 Agent' : '选择项目后，开始开发任务'}</strong><p>${state.projectId ? '我可以先阅读项目源码，帮你梳理结构、定位问题并提出代码修改。可逐项审核修改和检查命令，也可为本次任务授权持续执行。' : '导入本机项目并连接模型。执行任务时，任务描述与读取的源码将发送给你配置的模型服务。'}</p><div class="dev-agent-suggestions"><button data-dev-prompt="请先浏览项目文件，总结项目结构、使用的技术栈和主要入口文件。">梳理项目结构 ${icon('arrow')}</button><button data-dev-prompt="阅读项目的 README 和主要源码，说明如何运行项目，并指出最值得优先改进的地方。">阅读项目并给出建议 ${icon('arrow')}</button></div></div>`;
     } else {
-      container.innerHTML = session.messages.map(m => `<article class="dev-chat-message ${m.role === 'user' ? 'user' : 'assistant'}"><span class="dev-message-avatar">${m.role === 'user' ? '我' : icon('spark')}</span><div class="dev-message-content">${m.role === 'user' ? `<p>${escapeHtml(m.content)}</p>` : formatAssistant(m.content)}</div></article>`).join('');
+      container.innerHTML = session.messages.map(m => `<article class="dev-chat-message ${m.role === 'user' ? 'user' : 'assistant'}"><span class="dev-message-avatar">${m.role === 'user' ? '我' : icon('spark')}</span><div class="dev-message-content">${m.role === 'user' ? `<p>${escapeHtml(m.content)}</p>${renderMessageImages(m.images, session.id)}` : formatAssistant(m.content)}</div></article>`).join('');
     }
     if (state.busy) container.insertAdjacentHTML('beforeend', '<div class="dev-thinking"><i></i><i></i><i></i><span>正在阅读项目与处理任务…</span></div>');
     container.scrollTop = container.scrollHeight;
     $('#devStopButton').classList.toggle('hidden', !state.busy);
-    $('#devSendButton').disabled = !state.projectId || !$('#devModelSelect').value || state.busy;
+    updateSendButton();
   }
   function formatAssistant(value) {
     let safe = escapeHtml(value);
@@ -440,10 +617,18 @@
       filesCollapsed = false; applyPanelLayout(); selectRightTab('trace');
     }
     const metrics=task.metrics, events=session.events.filter(e=>!e.taskId||e.taskId===task.id).slice(-12);
+    const workflowLabel=task.skill?.workflow?` · 当前指引：${escapeHtml(task.skill.workflow.name)}`:'';
     const phase=({understand:'理解目标',context:'获取上下文',act:'执行修改',verify:'验证结果',review:'复核变更',complete:'完成',failed:'本次未完成',awaiting_user:'等待回答',awaiting_approval:'等待审核'})[task.phase] || task.phase;
     const elapsed=Math.round((new Date(task.finishedAt || Date.now())-new Date(task.startedAt))/1000);
-    target.innerHTML=`<div class="dev-execution-head"><strong>${escapeHtml(statusLabel(session.status))}</strong><span>${escapeHtml(phase)}</span><button id="devExportLogs">导出记录</button></div><div class="dev-run-metrics"><span>${task.rounds} 轮 / ${task.calls} 次工具</span><span>${elapsed}s</span><span>${metrics.inputTokens+metrics.outputTokens} tokens</span><span>${metrics.failedCommands} 次检查失败 / ${metrics.toolErrors || 0} 次工具错误 / ${metrics.interventions} 次交互</span></div><p class="dev-active-skill">${task.skill?`任务 Skill：${escapeHtml(task.skill.name)} · v${escapeHtml(task.skill.version)} · 已加载 ${task.skill.loadedResources.length} 份补充指引`:'任务未加载内置 Skill'}</p><details><summary>任务计划与执行轨迹</summary><p>目标：${escapeHtml(task.goal)}</p><p>验收：${escapeHtml(task.acceptance)}</p><p>当前：${escapeHtml(task.checkpoint?.summary || '正在明确任务')}</p><p>下一步：${escapeHtml(task.checkpoint?.next_action || '读取相关源码')}</p>${task.checkpoint?.failure?`<p class="dev-run-error">失败反馈：${escapeHtml(task.checkpoint.failure)}</p>`:''}<ol>${events.map(e=>`<li><strong>${escapeHtml(e.name)}</strong> · ${escapeHtml(e.detail)} <span>${escapeHtml(e.status==='completed'?'已执行':statusLabel(e.status))}</span>${e.error?`<p class="dev-run-error">${escapeHtml(e.error)}</p>`:''}${e.recovery?`<p>处理建议：${escapeHtml(e.recovery)}</p>`:''}</li>`).join('')}</ol><small>Token 由服务商返回，费用以厂商账单为准。完整记录包含工具输入、结果和时间。</small></details>${session.commands.filter(c=>c.taskId===task.id).map(c=>`<article class="dev-command-card"><div><strong>${escapeHtml(c.command+' '+c.args.join(' '))}</strong><span>${escapeHtml(statusLabel(c.status))}${c.exitCode!==null?' · exit '+c.exitCode:''}</span></div><p>${escapeHtml(c.purpose)}</p>${c.script?`<pre>${escapeHtml(c.script)}</pre>`:''}${c.output||c.error?`<details><summary>查看输出${c.truncated?'（仅保留末尾，已截断）':''}${c.stale?' · 源码已变化':''}</summary><pre>${escapeHtml(c.output || c.error)}</pre></details>`:''}${c.status==='pending_approval'?`<small>此命令会执行项目代码，请确认你信任此项目。</small><div class="dev-command-actions"><button data-command-id="${c.id}" data-command-action="deny">拒绝</button><button data-command-id="${c.id}" data-command-action="approve">批准本次命令</button></div>`:''}</article>`).join('')}${task.result?`<p class="dev-verification">验证依据：${escapeHtml(task.result.evidence)}</p>`:''}${['failed','needs_help','stopped','awaiting_user'].includes(session.status)?`<button id="devResumeTask" class="secondary-button">${session.status==='awaiting_user'?'回答并继续当前任务':session.status==='failed'?'重试当前任务':'继续当前任务'}</button>`:''}`;
-    target.querySelectorAll('details').forEach((detail,index)=>{detail.open=previousDetails[index] ?? index===0;});
+    const checkpoint=task.checkpoint || {};
+    const evidence=(checkpoint.evidence || []).map(item=>`<li>${escapeHtml(item.claim)} <small>来源：${escapeHtml(item.source)}${item.path?` · ${escapeHtml(item.path)}`:''}${item.valid===false?' · 已变化，需重新核实':''}</small></li>`).join('');
+    const todo=(checkpoint.todo || []).map(item=>`<li>${escapeHtml(item)}</li>`).join('');
+    const unresolved=session.commands.filter(c=>c.taskId===task.id&&['interrupted','running','queued'].includes(c.status));
+    target.innerHTML=`<div class="dev-execution-head"><strong>${escapeHtml(statusLabel(session.status))}</strong><span>${escapeHtml(phase)}</span><button id="devExportLogs">导出记录</button></div><div class="dev-run-metrics"><span>${task.rounds} 轮 / ${task.calls} 次工具</span><span>${elapsed}s</span><span>${metrics.inputTokens+metrics.outputTokens} tokens</span><span>${metrics.failedCommands} 次检查失败 / ${metrics.toolErrors || 0} 次工具错误 / ${metrics.interventions} 次交互</span></div><p class="dev-active-skill">${task.skill?`任务 Skill：${escapeHtml(task.skill.name)} · v${escapeHtml(task.skill.version)}${workflowLabel} · 已加载 ${task.skill.loadedResources.length} 份补充指引`:'任务未加载内置 Skill'}</p><details><summary>任务计划与执行轨迹</summary><p>目标：${escapeHtml(task.goal)}</p><p>验收：${escapeHtml(task.acceptance)}</p><p>当前：${escapeHtml(checkpoint.summary || '正在明确任务')}</p><p>下一步：${escapeHtml(checkpoint.next_action || '读取相关源码')}</p>${checkpoint.failure?`<p class="dev-run-error">失败反馈：${escapeHtml(checkpoint.failure)}</p>`:''}${evidence?`<p>已确认的关键证据</p><ul>${evidence}</ul>`:''}${todo?`<p>待办</p><ol>${todo}</ol>`:''}${unresolved.length?`<p class="dev-run-error">中断的命令结果未知，请检查记录后重试：${unresolved.map(c=>escapeHtml(c.command+' '+c.args.join(' '))).join('；')}</p>`:''}<ol>${events.map(e=>`<li><strong>${escapeHtml(e.name)}</strong> · ${escapeHtml(e.detail)} <span>${escapeHtml(e.status==='completed'?'已执行':statusLabel(e.status))}</span>${e.error?`<p class="dev-run-error">${escapeHtml(e.error)}</p>`:''}${e.recovery?`<p>处理建议：${escapeHtml(e.recovery)}</p>`:''}</li>`).join('')}</ol><small>Token 由服务商返回，费用以厂商账单为准。完整记录包含工具输入、结果和时间。</small></details>${session.commands.filter(c=>c.taskId===task.id).map(c=>`<article class="dev-command-card"><div><strong>${escapeHtml(c.command+' '+c.args.join(' '))}</strong><span>${escapeHtml(statusLabel(c.status))}${c.exitCode!==null?' · exit '+c.exitCode:''}</span></div><p>${escapeHtml(c.purpose)}</p>${c.script?`<pre>${escapeHtml(c.script)}</pre>`:''}${c.output||c.error?`<details><summary>查看输出${c.truncated?'（仅保留末尾，已截断）':''}${c.stale?' · 源码已变化':''}</summary><pre>${escapeHtml(c.output || c.error)}</pre></details>`:''}${c.status==='pending_approval'?`<small>批准后以本机账号执行项目代码，可访问项目外文件和网络；执行范围见本任务访问范围。</small><div class="dev-command-actions"><button data-command-id="${c.id}" data-command-action="deny">拒绝</button><button data-command-id="${c.id}" data-command-action="approve" ${task.kind==='inspect'||session.archivedAt?'disabled':''}>批准本次命令</button></div>`:''}</article>`).join('')}${task.result?`<p class="dev-verification">验证依据：${escapeHtml(task.result.evidence)}</p>`:''}${['failed','needs_help','stopped','awaiting_user'].includes(session.status)?`<button id="devResumeTask" class="secondary-button">${session.status==='awaiting_user'?'回答并继续当前任务':session.status==='failed'?'重试当前任务':'继续当前任务'}</button>`:''}`;
+    const taskMode=task.kind==='inspect'?'只读分析':task.permissions.edits&&task.permissions.commands?'自动执行':!task.permissions.edits&&!task.permissions.commands?'逐项审核':'自定义权限';
+    const taskActions=task.kind==='inspect'?'禁止修改和运行代码':`修改${task.permissions.edits?'自动应用':'需审核'} · 命令${task.permissions.commands?'自动执行':'需审核'}`;
+    target.querySelector('.dev-active-skill').insertAdjacentHTML('afterend', `<section id="devTaskAccess"><p><strong>当前任务权限：${taskMode}</strong> · ${taskActions}</p><details><summary>本任务访问范围</summary>${accessScopeHtml(task.accessScope,state.accessPolicy)}</details></section>`);
+    target.querySelectorAll('details').forEach((detail,index)=>{detail.open=previousDetails[index] ?? index===1;});
     target.scrollTop=previousScroll;
     if (task.outcome && ['failed','awaiting_user'].includes(session.status)) {
       const outcome = task.outcome;
@@ -454,10 +639,27 @@
   }
   function renderPending() {
     const changes=state.session?.changes || [], pending=changes.filter(c=>c.status==='pending'), target=$('#devPendingChanges');
-    const card=(c,applied=false)=>`<article class="dev-change-card"><div class="dev-change-head"><span class="dev-change-badge">M</span><strong>${escapeHtml(c.path)}</strong><span>${applied?'已应用':'待审核'}</span></div><p>${escapeHtml(c.reason)}</p><details><summary>查看修改前后对比</summary><div class="dev-diff-label">修改前</div><pre><code>${escapeHtml(c.original ?? '（新建文件）')}</code></pre><div class="dev-diff-label">${applied?'已应用内容':'拟议内容'}</div><pre><code>${escapeHtml(c.content)}</code></pre></details><div class="dev-change-actions">${applied?`<button data-change-action="revert" data-change-id="${c.id}" ${state.busy||c.original===null?'disabled':''}>恢复此修改前内容</button>`:`<button data-change-action="discard" data-change-id="${c.id}" ${state.busy?'disabled':''}>放弃</button><button class="primary-button" data-change-action="apply" data-change-id="${c.id}" ${state.busy?'disabled':''}>审核并应用</button>`}</div></article>`;
+    const card=(c,applied=false)=>{
+      const cannotWrite=state.busy||state.session?.task?.kind==='inspect'||!!state.session?.archivedAt;
+      const fileId=escapeHtml(c.id);
+      const oldLines=(c.original??'').split(/\r?\n/).filter(Boolean).length, newLines=c.content.split(/\r?\n/).filter(Boolean).length;
+      const label=applied?'已应用':c.status==='reverted'?'已恢复':'待审核';
+      return `<article class="dev-change-card" data-change-card="${fileId}"><div class="dev-change-head"><span class="dev-change-badge">${c.original===null?'A':'M'}</span><strong>${escapeHtml(c.path)}</strong><span>${label}</span></div><p>${escapeHtml(c.reason||'未提供修改说明')}</p><div class="dev-change-stats"><span>${oldLines} 行 → ${newLines} 行</span><span>${c.original===null?'新建文件':c.status==='reverted'?'已恢复':'查看行级差异'}</span></div><details data-diff-details="${fileId}"><summary>查看行级差异</summary><div class="dev-diff-view"><p>正在读取差异…</p></div></details><div class="dev-change-actions">${applied?`<button data-change-action="revert" data-change-id="${fileId}" ${cannotWrite||c.original===null?'disabled':''}>恢复此修改前内容</button>`:`<button data-change-action="discard" data-change-id="${fileId}" ${state.busy?'disabled':''}>拒绝此项</button><button class="primary-button" data-change-action="apply" data-change-id="${fileId}" ${cannotWrite?'disabled':''}>接受并应用</button>`}</div></article>`;
+    };
     target.innerHTML=(pending.length?`<div class="dev-review-heading"><div><strong>待审核的代码变更</strong><span>${pending.length} 个文件</span></div><small>应用后继续验证</small></div>`+pending.map(c=>card(c)).join(''):'')+(changes.some(c=>c.status==='applied')?'<details class="dev-applied-changes"><summary>已应用的变更与恢复</summary>'+changes.filter(c=>c.status==='applied').map(c=>card(c,true)).join('')+'</details>':'');
+    for(const details of target.querySelectorAll('[data-diff-details]'))details.addEventListener('toggle',()=>{
+      if(!details.open||details.dataset.loaded)return;
+      details.dataset.loaded='1';
+      const container=details.querySelector('.dev-diff-view');
+      api(`sessions/${encodeURIComponent(state.sessionId)}/changes/diff`,{changeId:details.dataset.diffDetails}).then(result=>{
+        if(result.tooLarge){container.innerHTML='<p class="dev-diff-too-large">此文件差异超过 24 KB，界面不加载完整文件对比；可通过项目文件预览查看源码。</p>';return;}
+        const lines=(result.diff||'').split('\n');
+        container.innerHTML=`<div class="dev-diff-summary"><span>−${result.deletions} 删除</span><span>+${result.additions} 新增</span><span>${escapeHtml(result.path)}</span></div><pre class="dev-diff-code">${lines.map(line=>`<span class="${line.startsWith('+++')||line.startsWith('---')?'meta':line.startsWith('+')?'added':line.startsWith('-')?'removed':'context'}">${escapeHtml(line||' ')}</span>`).join('\n')}</pre>`;
+      }).catch(error=>{container.innerHTML=`<p class="dev-diff-error">${escapeHtml(error.message)}</p>`;details.dataset.loaded='';});
+    });
   }
   async function selectProject(projectId, preferredSessionId) {
+    clearImages();
     pollGeneration++; pollingId = ''; state.projectId = projectId; state.sessionId = ''; state.session = null; state.busy = false; state.file = ''; state.files = []; rememberSelection();
     renderProjects(); renderFileTree(); renderConversation(); renderPending(); renderExecution(); setError('');
     $('#devEditorTitle').textContent = '项目文件 / 选择文件';
@@ -469,26 +671,28 @@
     if (sessionId && state.projectId === projectId) { state.sessionId = sessionId; rememberSelection(); await loadSession(sessionId); }
   }
   async function sendMessage(message) {
-    if (!message.trim() || state.busy) return;
+    if ((!message.trim() && !draftImages.length) || state.busy || sending || addingImages) return;
     if (!state.projectId) { setError('请先导入一个本地项目。'); return; }
-    if (state.session?.status === 'awaiting_user') {
-      const id = state.sessionId;
-      try { await api(`sessions/${encodeURIComponent(id)}/resume`, {feedback: message}); if (state.sessionId === id) { $('#devPrompt').value=''; await loadSession(id); updateSendButton(); } }
-      catch (error) { setError(error.message); }
-      return;
-    }
+    const awaiting = state.session?.status === 'awaiting_user';
     const providerId = $('#devModelSelect').value;
-    if (!providerId) { openSettings(); setError('请先配置并选择执行模型。'); return; }
-    if (!state.sessionId) await createSession();
-    if (!state.sessionId) return;
-    const sessionId = state.sessionId;
-    closeComposerPickers(); state.busy = true; $('#devPrompt').value = ''; setError('');
-    if (state.session) { state.session.messages.push({ role: 'user', content: message }); state.session.status = 'running'; renderConversation(); }
-    renderProjects();
+    if (!awaiting && !providerId) { openSettings(); setError('请先配置并选择执行模型。'); return; }
+    const images = draftImages.map(({name, dataUrl}) => ({name, dataUrl}));
+    sending = true; renderProjects();
+    let sessionId;
     try {
-      await api(`sessions/${encodeURIComponent(sessionId)}/run`, { providerId, message, acceptance: $('#devAcceptance').value, kind: $('#devTaskKind').value, skillId: $('#devSkillSelect').value, permissions: { edits: $('#devAllowEdits').checked, commands: $('#devAllowCommands').checked } });
-      if (state.sessionId === sessionId) await pollRun(sessionId);
-    } catch (error) { if (state.sessionId === sessionId) { await loadSession(sessionId); setError(error.message); } }
+      if (!state.sessionId) await createSession(true);
+      if (!state.sessionId) return;
+      sessionId = state.sessionId;
+      closeComposerPickers(); setError('');
+      const body = awaiting ? {feedback: message, images} : {providerId, message, images,
+        acceptance: $('#devAcceptance').value, kind: $('#devTaskKind').value, skillId: $('#devSkillSelect').value,
+        permissions: {edits: $('#devAllowEdits').checked, commands: $('#devAllowCommands').checked}};
+      await api(`sessions/${encodeURIComponent(sessionId)}/${awaiting ? 'resume' : 'run'}`, body);
+      if (state.sessionId === sessionId) { $('#devPrompt').value = ''; clearImages(); await loadSession(sessionId); }
+    } catch (error) {
+      if (sessionId && state.sessionId === sessionId) await loadSession(sessionId).catch(() => {});
+      setError(error.message);
+    } finally { sending = false; renderProjects(); updateSendButton(); }
   }
   async function pollRun(id) {
     const generation = ++pollGeneration; pollingId = id;
@@ -539,7 +743,7 @@
       finally { button.disabled = false; }
       return;
     }
-    if (button.id === 'devFilesTab' || button.id === 'devTraceTab') { selectRightTab(button.id === 'devFilesTab' ? 'files' : 'trace'); return; }
+    if (['devFilesTab', 'devTraceTab', 'devBrowserTab'].includes(button.id)) { selectRightTab({devFilesTab:'files', devTraceTab:'trace', devBrowserTab:'browser'}[button.id]); return; }
     if (button.id === 'devToggleSidebar') {
       sidebarCollapsed = !sidebarCollapsed;
       localStorage.setItem('devSidebarCollapsed', sidebarCollapsed ? '1' : '0');
@@ -549,6 +753,7 @@
       filesCollapsed = !filesCollapsed;
       localStorage.setItem('devFilesCollapsed', filesCollapsed ? '1' : '0');
       applyPanelLayout();
+      document.dispatchEvent(new Event('workspace:right-panel'));
       (filesCollapsed ? restoreFiles : filesToggle).focus(); return;
     }
     if(button.id==='devViewSkill') {
@@ -559,14 +764,22 @@
     if(button.id==='devExportLogs') {
       try {const data=await api(`sessions/${state.sessionId}/logs`);const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='shujin-task-'+state.session.task.id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){setError(error.message);}return;
     }
+    if(button.id==='devResumeTask' && state.session?.status==='awaiting_user') { await sendMessage($('#devPrompt').value); return; }
     if(button.id==='devResumeTask'||button.hasAttribute('data-command-action')) {
+      const resuming = button.id==='devResumeTask';
+      if (resuming && (sending || addingImages)) return;
       button.disabled=true;
+      if (resuming) { sending=true; renderProjects(); }
       try {
-        const path=button.id==='devResumeTask'?'resume':`commands/${button.dataset.commandId}`;
-        await api(`sessions/${state.sessionId}/${path}`,{action:button.dataset.commandAction,feedback:$('#devPrompt').value});
-        if(button.id==='devResumeTask'){$('#devPrompt').value='';updateSendButton();}
-        await loadSession(state.sessionId);setError('');
-      }catch(error){setError(error.message);button.disabled=false;}return;
+        const sessionId=state.sessionId;
+        const path=resuming?'resume':`commands/${button.dataset.commandId}`;
+        const body=resuming?{feedback:$('#devPrompt').value,images:draftImages.map(({name,dataUrl})=>({name,dataUrl}))}:{action:button.dataset.commandAction};
+        await api(`sessions/${sessionId}/${path}`,body);
+        if(state.sessionId!==sessionId)return;
+        if(resuming){$('#devPrompt').value='';clearImages();updateSendButton();}
+        await loadSession(sessionId);setError('');
+      }catch(error){setError(error.message);button.disabled=false;}
+      finally{if(resuming){sending=false;renderProjects();updateSendButton();}}return;
     }
     if (button.id === 'devImportButton' || button.id === 'devEmptyImport') { await importProject(); return; }
     if (button.id === 'devRefreshFiles') { await loadFiles(); return; }
@@ -601,7 +814,7 @@
       const session = state.sessions.find(s => s.id === button.dataset.sessionId);
       if (!session) return;
       if (session.projectId !== state.projectId) { await selectProject(session.projectId, session.id); return; }
-      pollGeneration++; pollingId = ''; state.sessionId = session.id; state.busy = false; rememberSelection(); await loadSession(state.sessionId); setError(''); return;
+      clearImages(); pollGeneration++; pollingId = ''; state.sessionId = session.id; state.busy = false; rememberSelection(); await loadSession(state.sessionId); setError(''); return;
     }
     if (button.hasAttribute('data-change-action')) { await performChange(button.dataset.changeId, button.dataset.changeAction); return; }
     if (button.hasAttribute('data-edit-provider')) { const p = state.providers.find(item => item.id === button.dataset.editProvider); if (p) openProviderForm(p); return; }
@@ -623,6 +836,14 @@
   });
   $('#devComposer').addEventListener('submit', event => { event.preventDefault(); void sendMessage($('#devPrompt').value); });
   $('#devPrompt').addEventListener('input', updateSendButton);
+  let promptWidth = 0;
+  const promptObserver = new ResizeObserver(([entry]) => {
+    if (entry.contentRect.width === promptWidth) return;
+    promptWidth = entry.contentRect.width;
+    resizePrompt();
+  });
+  promptObserver.observe($('#devPrompt'));
+  window.addEventListener('resize', resizePrompt);
   $('#devPrompt').addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); $('#devComposer').requestSubmit(); } });
   $('#devSettingsModal').addEventListener('click', event => { if (event.target.id === 'devSettingsModal') closeSettings(); });
   $('#devProviderForm').addEventListener('submit', async event => {

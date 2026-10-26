@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from .browser import BrowserSession, DISABLED_MESSAGE, RETIRED_ACTIONS
 from .common import AppError
 from .workspace import Workspace
+from .images import IMAGE_REQUEST_BYTES
 
 PUBLIC_FILES = {"index.html", "styles.css", "desktop.css", "account.css", "app.js", "account.js", "developer.js", "developer.css", "agent-theme.css"}
 
@@ -51,14 +52,20 @@ def create_app(assets, data_dir, desktop_token="", workspace=None, browser=None)
     async def route(path, request: Request):
         try:
             if path.startswith("api/dev/"):
+                segments = path[len("api/dev/"):].split("/")
+                if request.method in {"GET", "HEAD"} and len(segments) == 4 and segments[0] == "sessions" and segments[2] == "images":
+                    image, image_path = dev.session_image(segments[1], segments[3])
+                    return FileResponse(image_path, media_type=image["mime"], headers={"Cache-Control": "no-store"})
                 data = {}
                 if request.method == "POST":
                     if not request.headers.get("content-type", "").startswith("application/json"):
                         raise AppError("请使用 JSON 请求。", 415)
+                    image_message = len(segments) == 3 and segments[0] == "sessions" and segments[2] in {"run", "resume"}
+                    limit = IMAGE_REQUEST_BYTES if image_message else 1000000
                     raw = bytearray()
                     async for chunk in request.stream():
                         raw.extend(chunk)
-                        if len(raw) > 1000000:
+                        if len(raw) > limit:
                             raise AppError("请求过大。", 413)
                     try:
                         data = json.loads(raw or b"{}")
@@ -66,7 +73,7 @@ def create_app(assets, data_dir, desktop_token="", workspace=None, browser=None)
                         raise AppError("无效的 JSON。") from exc
                     if not isinstance(data, dict):
                         raise AppError("无效的请求参数。")
-                return await dev.handle(request.method, path[len("api/dev/"):].split("/"), data, request.query_params)
+                return await dev.handle(request.method, segments, data, request.query_params)
             if path == "api/xhs/status" and request.method == "GET":
                 return await xhs.status()
             if path.startswith("api/xhs/"):

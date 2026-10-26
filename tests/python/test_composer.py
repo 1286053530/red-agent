@@ -35,9 +35,15 @@ async def test_composer_access_modes_control_real_task_permissions(workspace, li
             await page.locator("#devAccessPicker>summary").click()
             output = ROOT / ".local/composer-check"
             output.mkdir(parents=True, exist_ok=True)
+            await page.locator('#devAccessScope>summary').click()
+            scope_text = await page.locator('#devAccessScopeBody').inner_text()
+            assert project['path'] in scope_text and 'https://example.com/v1' in scope_text
+            assert '联网未隔离' in scope_text and '敏感配置' in scope_text
             await page.screenshot(path=str(output / "permissions.png"))
             await page.check('input[name="devAccessMode"][value="readonly"]')
             assert await page.locator("#devAccessLabel").inner_text() == "只读分析"
+            assert await page.locator('#devAllowEdits').is_disabled()
+            assert await page.locator('#devAllowCommands').is_disabled()
             await page.fill("#devPrompt", "审查加法")
             await page.locator("#devAccessPicker>summary").click()
             await page.locator("#devAccessPicker .dev-task-options>summary").click()
@@ -49,17 +55,20 @@ async def test_composer_access_modes_control_real_task_permissions(workspace, li
             await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='已完成'")
             assert session["task"]["kind"] == "inspect"
             assert session["task"]["permissions"] == {"edits": False, "commands": False}
+            assert '当前任务权限：只读分析' in await page.locator('#devTaskAccess').inner_text()
             assert not session["changes"] and not session["commands"]
             old_task_id = session["task"]["id"]
             await page.locator("#devAccessPicker>summary").click()
             await page.check('input[name="devAccessMode"][value="automatic"]')
+            assert '当前任务权限：只读分析' in await page.locator('#devTaskAccess').inner_text()
             assert session["task"]["id"] == old_task_id
             assert session["task"]["permissions"] == {"edits": False, "commands": False}
             await page.fill("#devPrompt", "修复加法并测试")
             await page.click("#devSendButton")
-            await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='已完成'", timeout=20000)
+            await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='已完成' && document.querySelector('#devTaskAccess').textContent.includes('当前任务权限：自动执行')", timeout=20000)
             assert session["task"]["kind"] == "change"
             assert session["task"]["permissions"] == {"edits": True, "commands": True}
+            assert '当前任务权限：自动执行' in await page.locator('#devTaskAccess').inner_text()
             assert session["changes"][-1]["status"] == "applied"
             assert session["commands"][-1]["status"] == "passed"
             assert not steps

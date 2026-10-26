@@ -12,14 +12,19 @@ import httpx
 from playwright.async_api import async_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
 
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", action="store_true")
+    launch = parser.add_mutually_exclusive_group()
+    launch.add_argument("--source", action="store_true")
+    launch.add_argument("--executable", type=Path, help="Smoke-test a portable release executable")
     parser.add_argument("--app-dir", type=Path, default=ROOT / "release/win-unpacked")
     args = parser.parse_args()
-    executable = ROOT / "node_modules/electron/dist/electron.exe" if args.source else args.app_dir.resolve() / "筱竹书瑾.exe"
+    executable = (ROOT / "node_modules/electron/dist/electron.exe" if args.source else
+                  args.executable.resolve() if args.executable else args.app_dir.resolve() / "筱竹书瑾.exe")
+    mode = "source" if args.source else "portable" if args.executable else "packaged"
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
@@ -29,7 +34,7 @@ async def main():
     env = {**os.environ, "PYTHONUTF8": "1"}
     env.pop("ELECTRON_RUN_AS_NODE", None)
     env.pop("SHUJIN_DESKTOP_SMOKE", None)
-    log = (output / ("app-source.log" if args.source else "app-packaged.log")).open("w", encoding="utf-8")
+    log = (output / f"app-{mode}.log").open("w", encoding="utf-8")
     process = subprocess.Popen([str(executable), *([str(ROOT)] if args.source else []), f"--remote-debugging-port={port}",
                                 "--user-data-dir=" + str(folder / "profile"), "--shujin-smoke-test"],
                                cwd=ROOT, env=env, stdout=log, stderr=log, creationflags=0x08000000 if os.name == "nt" else 0)
@@ -68,8 +73,56 @@ async def main():
                 assert await page.locator("#devTraceTabPanel #devExecution").is_visible()
                 await page.click("#devFilesTab")
                 assert await page.locator("#devFilesTabPanel").is_visible()
+                await page.click("#devBrowserTab")
+                assert await page.locator("#devBrowserTabPanel .dev-browser-empty").is_visible()
+                assert await page.locator("#devComposer").is_visible()
+                assert await page.locator("#devRightResize").is_visible()
+                assert await page.evaluate("typeof window.shujinDesktop.setOfficialZoom") == "function"
+                toolbar_layout = await page.evaluate("""() => {
+                    const host=document.createElement('div');
+                    host.className='dev-browser-tabpanel';
+                    host.style.cssText='position:fixed;left:0;top:0;height:600px;z-index:999';
+                    const overlay=document.querySelector('.manual-official').cloneNode(true);
+                    overlay.classList.remove('hidden');
+                    overlay.querySelector('#manualOfficialTitle').textContent='小红书官网 · 70%';
+                    for(const id of ['manualOfficialZoomReset','manualOfficialExpand'])overlay.querySelector('#'+id).classList.remove('hidden');
+                    host.append(overlay);document.body.append(host);
+                    try {
+                        const rows=[];
+                        for(const width of [280,320,360,440]) {
+                            host.style.width=width+'px';
+                            const toolbar=overlay.querySelector('.manual-official-toolbar').getBoundingClientRect();
+                            const title=overlay.querySelector('strong');
+                            const status=overlay.querySelector('p').getBoundingClientRect();
+                            const viewport=overlay.querySelector('.manual-official-viewport').getBoundingClientRect();
+                            let right=title.getBoundingClientRect().right;
+                            let valid=getComputedStyle(title).whiteSpace==='nowrap' && getComputedStyle(title).textOverflow==='ellipsis' && toolbar.bottom<=status.top && status.bottom<=viewport.top;
+                            for(const button of overlay.querySelectorAll('button')) {
+                                const rect=button.getBoundingClientRect();
+                                valid=valid && rect.left>=right && rect.right<=toolbar.right && rect.top>=toolbar.top && rect.bottom<=toolbar.bottom;
+                                right=rect.right;
+                            }
+                            for(const id of ['manualOfficialZoomOut','manualOfficialExpand']) {
+                                const button=overlay.querySelector('#'+id);
+                                const symbol=button.querySelector('svg use')?.getAttribute('href');
+                                valid=valid && button.textContent.trim()==='' && !!button.getAttribute('aria-label') && !!button.title && !!document.querySelector(symbol);
+                            }
+                            rows.push({width,valid});
+                        }
+                        return rows;
+                    } finally {host.remove();}
+                }""")
+                assert all(row['valid'] for row in toolbar_layout), toolbar_layout
+                await page.click("#devBrowserTab")
+                await page.wait_for_selector("#devBrowserTabPanel .dev-browser-empty")
+                await page.locator('#devConversation').click(position={"x":10,"y":10})
+                assert await page.evaluate("document.querySelector('#developerView').classList.contains('files-collapsed')")
+                await page.click("#devRestoreFiles")
+                await page.click("#devBrowserTab")
+                assert not await page.evaluate("document.querySelector('#developerView').classList.contains('files-collapsed')")
+                await page.click("#devFilesTab")
                 bridge = await page.evaluate("({version:window.shujinDesktop.version,node:typeof require})")
-                assert bridge == {"version": "2.1.19", "node": "undefined"}
+                assert bridge == {"version": VERSION, "node": "undefined"}, bridge
                 official_requests, automation_requests = [], []
                 def observed(request):
                     if "xiaohongshu.com" in request.url or "xhscdn.com" in request.url:
@@ -109,10 +162,11 @@ async def main():
                 await page.evaluate("window.close()")
                 code = await asyncio.to_thread(process.wait, 15)
                 assert code == 0, code
-                report = {"passed": True, "mode": "source" if args.source else "packaged", "bridge": bridge,
+                report = {"passed": True, "mode": mode, "bridge": bridge,
                           "pythonApi": state["status"], "anonymousApi": 403, "shutdownCode": code,
-                          "manualOnly": True, "officialRequests": len(official_requests), "automaticApiRequests": len(automation_requests), "builtinSkill": "software-development", "largeSourcePaging": True}
-                (output / ("app-source.json" if args.source else "app-packaged.json")).write_text(json.dumps(report, indent=2), encoding="utf-8")
+                          "manualOnly": True, "officialRequests": len(official_requests), "automaticApiRequests": len(automation_requests), "builtinSkill": "software-development", "largeSourcePaging": True,
+                          "manualToolbarLayout": toolbar_layout, "conversationClickCollapsesBrowserPanel": True}
+                (output / f"app-{mode}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
                 print(json.dumps(report))
             finally:
                 await browser.close()

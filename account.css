@@ -69,4 +69,10 @@ button.entry-link{background:none;border:0;padding:0;cursor:pointer}.entry-link:
 
 #accountView.official-active>:not(.manual-official):not(.xhs-task-strip){display:none}
 .manual-official-viewport{flex:1;min-height:0;background:#fff}
-.manual-official>p{flex-shrink:0}
+.manual-official-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;flex:none}
+.manual-official-toolbar strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.manual-official-actions{display:flex;flex:none;align-items:center;gap:6px;white-space:nowrap}
+.manual-official-actions button{flex:none;white-space:nowrap}
+.manual-official-actions .manual-official-icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0}
+.manual-official-icon .icon{width:16px;height:16px;flex:none}
+.manual-official>p{flex-shrink:0;min-width:0}

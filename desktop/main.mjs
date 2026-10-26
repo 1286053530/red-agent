@@ -31,6 +31,7 @@ else {
     };
     ipcMain.handle('xhs:open',async(event,bounds)=>{trusted(event);xhs.setBounds(bounds);return xhs.open();});
     ipcMain.handle('xhs:bounds',async(event,bounds)=>{trusted(event);return xhs.setBounds(bounds);});
+    ipcMain.handle('xhs:zoom',async(event,factor)=>{trusted(event);return xhs.setZoomFactor(factor);});
     ipcMain.handle('xhs:hide',async event=>{trusted(event);return xhs.hide();});
     ipcMain.handle('xhs:resume',async(event,bounds)=>{trusted(event);xhs.setBounds(bounds);return xhs.show();});
     ipcMain.handle('xhs:close',async event=>{trusted(event);return xhs.close();});

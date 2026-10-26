@@ -130,10 +130,11 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
         browser = await playwright.chromium.launch(channel="msedge", headless=True)
         try:
             page = await browser.new_page()
-            await page.add_init_script("""window.manualCalls={open:0,close:0,external:0,hide:0,resume:0};let viewChanged;
+            await page.add_init_script("""window.manualCalls={open:0,close:0,external:0,hide:0,resume:0};window.manualZoom=0.8;let viewChanged;
             window.shujinDesktop={onOfficial:callback=>{viewChanged=callback;},
               openOfficial:async bounds=>{manualCalls.open++;window.openedBounds=bounds;viewChanged({visible:true,retained:true,error:''});},
-              resizeOfficial:async()=>{},
+              resizeOfficial:async bounds=>{window.resizedBounds=bounds;},
+              setOfficialZoom:async factor=>{manualZoom=factor;viewChanged({visible:true,retained:true,error:'',zoomFactor:factor});return {zoomFactor:factor};},
               hideOfficial:async()=>{manualCalls.hide++;viewChanged({visible:false,retained:true,error:''});},
               resumeOfficial:async()=>{manualCalls.resume++;viewChanged({visible:true,retained:true,error:''});},
               closeOfficial:async()=>{manualCalls.close++;viewChanged({visible:false,retained:false,error:''});},
@@ -168,5 +169,146 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
             await page.locator('.activity-rail [data-view="account"]').click()
             assert not await page.locator(".manual-official").is_visible()
             assert not [url for url in requests if "/api/xhs/" in url or "xiaohongshu.com" in url]
+            # The Agent browser starts idle and reuses the same retained page.
+            await page.locator('.activity-rail [data-view="developer"]').click()
+            await page.click('#devBrowserTab')
+            assert await page.locator('#devBrowserTabPanel .dev-browser-empty').is_visible()
+            assert await page.evaluate('manualCalls.open') == 3
+            await page.locator('#devBrowserTabPanel [data-open-xhs]').click()
+            assert await page.locator('#devBrowserTabPanel .manual-official').is_visible()
+            for name, symbol in [('缩小网页内容', '#i-zoom-out'), ('放大浏览', '#i-expand')]:
+                button = page.get_by_role('button', name=name, exact=True)
+                assert await button.inner_text() == ''
+                assert await button.get_attribute('title')
+                assert await button.locator('svg[aria-hidden=true] use').get_attribute('href') == symbol
+            assert await page.locator('#devComposer').is_visible()
+            assert await page.evaluate('manualCalls.open') == 4
+            async def click_conversation_and_expect_browser_hidden(target):
+                hides = await page.evaluate('manualCalls.hide')
+                await page.locator(target).click()
+                await page.wait_for_function(f'manualCalls.hide==={hides + 1}')
+                assert 'files-collapsed' in (await page.locator('#developerView').get_attribute('class') or '')
+                assert not await page.locator('#devBrowserTabPanel .manual-official').is_visible()
+                if target == '#devPrompt':
+                    assert await page.evaluate("document.activeElement.id") == 'devPrompt'
+                resumes = await page.evaluate('manualCalls.resume')
+                await page.click('#devRestoreFiles')
+                await page.wait_for_function(f'manualCalls.resume==={resumes + 1}')
+                assert await page.locator('#devBrowserTabPanel .manual-official').is_visible()
+
+            await click_conversation_and_expect_browser_hidden('#devConversation')
+            await page.locator('#devConversation').evaluate("element => {element.innerHTML='<article class=\"dev-chat-message user\"><div class=\"dev-message-content\">测试消息</div></article>';}")
+            await click_conversation_and_expect_browser_hidden('.dev-chat-message')
+            await page.locator('#devPrompt').evaluate('element => element.disabled=false')
+            await click_conversation_and_expect_browser_hidden('#devPrompt')
+            hides = await page.evaluate('manualCalls.hide')
+            resumes = await page.evaluate('manualCalls.resume')
+            await page.click('#devFilesTab')
+            await page.wait_for_function(f'manualCalls.hide==={hides + 1}')
+            assert not await page.locator('.manual-official').is_visible()
+            await page.click('#devBrowserTab')
+            await page.wait_for_function(f'manualCalls.resume==={resumes + 1}')
+            await page.click('#devToggleFiles')
+            await page.wait_for_function(f'manualCalls.hide==={hides + 2}')
+            await page.click('#devRestoreFiles')
+            await page.wait_for_function(f'manualCalls.resume==={resumes + 2}')
+            await page.click('#devModelPicker>summary')
+            await page.click('#devManageModel')
+            await page.wait_for_function(f'manualCalls.hide==={hides + 3}')
+            await page.click('#devCloseSettings')
+            await page.wait_for_function(f'manualCalls.resume==={resumes + 3}')
+            await page.click('#manualOfficialExpand')
+            assert await page.locator('#accountView .manual-official').is_visible()
+            await page.locator('.activity-rail [data-view="developer"]').click()
+            assert await page.locator('#devBrowserTabPanel .manual-official').is_visible()
+            assert await page.evaluate('manualCalls.open') == 4
+            await page.click('#manualOfficialZoomOut')
+            assert await page.locator('#manualOfficialTitle').inner_text() == '小红书官网 · 70%'
+            await page.click('#manualOfficialZoomOut')
+            await page.click('#manualOfficialZoomOut')
+            assert await page.evaluate('manualZoom') == 0.5
+            assert await page.locator('#manualOfficialZoomOut').is_disabled()
+            await page.click('#manualOfficialZoomReset')
+            assert await page.evaluate('manualZoom') == 0.8
+            screenshot_dir = ROOT / '.local/manual-access-check'
+            screenshot_dir.mkdir(parents=True, exist_ok=True)
+            # Drag the left edge in both directions; retain usable chat width.
+            handle = page.locator('#devRightResize')
+            before = await page.locator('#devFilesPanel').bounding_box()
+            box = await handle.bounding_box()
+            hide_before = await page.evaluate('manualCalls.hide')
+            await page.mouse.move(box['x'] + 4, box['y'] + box['height'] / 2)
+            await page.mouse.down()
+            await page.wait_for_function('manualCalls.hide > ' + str(hide_before))
+            await page.mouse.move(box['x'] - 100, box['y'] + box['height'] / 2, steps=8)
+            await page.mouse.up()
+            after = await page.locator('#devFilesPanel').bounding_box()
+            assert after['width'] > before['width'] + 90
+            assert (await page.locator('.dev-agent-panel').bounding_box())['width'] >= 340
+            await handle.focus()
+            await page.keyboard.press('ArrowRight')
+            narrower = await page.locator('#devFilesPanel').bounding_box()
+            assert narrower['width'] < after['width']
+            await handle.dblclick()
+            assert await page.evaluate("localStorage.getItem('devRightPanelWidth')") is None
+            await handle.focus()
+            await page.keyboard.press('ArrowLeft')
+            saved_width = await page.evaluate("Number(localStorage.getItem('devRightPanelWidth'))")
+            await page.screenshot(path=str(screenshot_dir / 'agent-mini.png'))
+            # The reset button adds width: verify both zoom states at each drag width.
+            for width in [440, 360, 320, 280]:
+                current = await page.locator('#devFilesPanel').bounding_box()
+                box = await handle.bounding_box()
+                await page.mouse.move(box['x'] + box['width'] / 2, box['y'] + box['height'] / 2)
+                await page.mouse.down()
+                await page.mouse.move(box['x'] + box['width'] / 2 + current['width'] - width,
+                                      box['y'] + box['height'] / 2, steps=8)
+                await page.mouse.up()
+                assert abs((await page.locator('#devFilesPanel').bounding_box())['width'] - width) <= 1
+                for zoom in [0.8, 0.7]:
+                    if zoom == 0.7:
+                        await page.get_by_role('button', name='缩小网页内容', exact=True).click()
+                    layout = await page.evaluate("""() => {
+                        const rect = element => {const r=element.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+                        const toolbar=document.querySelector('.manual-official-toolbar');
+                        const title=document.querySelector('#manualOfficialTitle');
+                        const buttons=[...toolbar.querySelectorAll('button')].filter(b=>b.getClientRects().length);
+                        return {toolbar:rect(toolbar),title:rect(title),
+                            titleStyle:{whiteSpace:getComputedStyle(title).whiteSpace,overflow:getComputedStyle(title).overflow,textOverflow:getComputedStyle(title).textOverflow},
+                            titleTooltip:title.title,buttons:buttons.map(rect),
+                            status:rect(document.querySelector('#manualOfficialState')),
+                            viewport:rect(document.querySelector('.manual-official-viewport'))};
+                    }""")
+                    assert layout['titleStyle'] == {'whiteSpace': 'nowrap', 'overflow': 'hidden', 'textOverflow': 'ellipsis'}
+                    assert layout['titleTooltip'] == f'小红书官网 · {round(zoom * 100)}%'
+                    assert layout['title']['width'] > 0
+                    assert layout['toolbar']['bottom'] <= layout['status']['y']
+                    assert layout['status']['bottom'] <= layout['viewport']['y']
+                    assert layout['viewport']['height'] > 100
+                    previous_right = layout['title']['right']
+                    for button in layout['buttons']:
+                        assert previous_right <= button['x']
+                        assert button['y'] >= layout['toolbar']['y']
+                        assert button['bottom'] <= layout['toolbar']['bottom']
+                        assert button['right'] <= layout['toolbar']['right']
+                        previous_right = button['right']
+                await page.screenshot(path=str(screenshot_dir / f'agent-mini-{width}.png'))
+                await page.click('#manualOfficialZoomReset')
+            saved_width = await page.evaluate("Number(localStorage.getItem('devRightPanelWidth'))")
+            # The same icon opens the retained page in the full account view.
+            await page.get_by_role('button', name='放大浏览', exact=True).click()
+            assert await page.locator('#accountView .manual-official').is_visible()
+            assert not await page.get_by_role('button', name='放大浏览', exact=True).is_visible()
+            await page.locator('.activity-rail [data-view="developer"]').click()
+            assert await page.locator('#devBrowserTabPanel .manual-official').is_visible()
+            await page.click('#manualOfficialBack')
+            assert await page.locator('#devBrowserTabPanel .dev-browser-empty').is_visible()
+            await page.locator('#devBrowserTab').focus()
+            await page.keyboard.press('ArrowRight')
+            assert await page.locator('#devFilesTab').get_attribute('aria-selected') == 'true'
+            assert not [url for url in requests if '/api/xhs/' in url or 'xiaohongshu.com' in url]
+            await page.reload()
+            restored = await page.locator('#devFilesPanel').bounding_box()
+            assert abs(restored['width'] - saved_width) <= 1
         finally:
             await browser.close()

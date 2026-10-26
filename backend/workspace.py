@@ -13,15 +13,18 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from .common import AppError, digest, dumps, now, uid
 from .model import call_model
+from .images import validate_images, image_content
 from .runtime import bounded_history, run_process, validate_command
-from .skill_catalog import SkillCatalog, DEFAULT_SKILL, task_skill_context
+from .python_checks import is_behavior_check, python_check, python_environment
+from .skill_catalog import SkillCatalog, DEFAULT_SKILL, task_skill_context, task_workflow
 from .source_reader import source_page, search_source
 from .reliability import ProgressGuard
+from .access import ACCESS_POLICY, task_permissions, require_change_task
 
 IGNORED = {"node_modules", ".git", ".local", ".next", "dist", "build", "release", "coverage", "test-results", "vendor", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", ".nox", ".cache", ".nuxt", ".output", ".gradle", "target", "bower_components", "site-packages"}
-PRIVATE = re.compile(r"^\.env(?:\.|$)|^(?:\.ssh|\.aws|\.azure|\.npmrc|\.netrc|credentials|secrets?)(?:\.|$)|\.(?:pem|p12|pfx|key)$", re.I)
+PRIVATE = re.compile(r"^\.env(?:\.|$)|^(?:\.ssh|\.aws|\.azure|\.kube|\.docker|\.npmrc|\.netrc|\.pypirc|\.gitconfig|\.git-credentials|credentials|secrets?|id_rsa|id_ed25519)(?:\.|$)|\.(?:pem|p12|pfx|key|jks|keystore)$", re.I)
 ACTIVE_COMMANDS = {"running", "queued", "pending_approval"}
-SYSTEM = Path(__file__).with_name("BASE.md").read_text(encoding="utf-8") + "\n\n" + """You are a single software agent in a local source project. Built-in executable checks currently support JavaScript/Node only. Respond in Chinese.
+SYSTEM = Path(__file__).with_name("BASE.md").read_text(encoding="utf-8") + "\n\n" + """You are a single software agent in a local source project. Built-in executable checks support JavaScript/Node and Python (pytest, unittest discover, py_compile and project scripts). Respond in Chinese.
 Understand the user goal and acceptance, update_plan, search/read relevant source, act, verify actual results,
 correct failures, review_diff, then finish_task with observable evidence. Read all character pages of existing
 files before replacement: follow next_offset with offset while hasMore. A file is not read until all pages
@@ -47,9 +50,7 @@ def page_query(query):
 def task_kind(message, requested=None):
     if requested in ("inspect", "change"):
         return requested
-    review = re.search(r"审查|审阅|评审|分析|梳理|阅读|查看|检查|\b(?:review|inspect|analy[sz]e|explain)\b", message, re.I)
-    change = re.search(r"修复|修改|改成|改为|新增|添加|重构|删除|(?:并|然后|接着|帮我)(?:实现|开发)|\b(?:fix|implement|refactor|add|delete)\b", message, re.I)
-    return "inspect" if review and not change else "change"
+    return "inspect" if task_workflow(message) in {"code-review", "code-analysis"} else "change"
 
 
 def atomic_write(path, content, mode=0o600):
@@ -93,6 +94,10 @@ class Workspace:
                     session["task"]["outcome"] = {"status": "failed", "code": "legacy_interruption", "reason": session.get("error") or "旧任务未完成，可查看记录后重试。", "retryable": True, "at": now()}
             for key, default in [("events", []), ("commands", []), ("observations", {})]:
                 session.setdefault(key, default)
+            if session.get("task"):
+                self.normalize_checkpoint(session["task"])
+                if session["task"].get("kind") == "inspect":
+                    session["task"]["permissions"] = {"edits": False, "commands": False}
             for change in session["changes"]:
                 if change["status"] != "pending":
                     continue
@@ -111,6 +116,8 @@ class Workspace:
             for event in session["events"]:
                 if event["status"] == "running":
                     event.update(status="interrupted", finishedAt=now())
+            if session.get("task"):
+                self.validate_checkpoint_evidence(session)
             if session["status"] == "running" or session["status"] in {"waiting", "review"} and not self.pending(session):
                 session.update(status="stopped", error="服务已重启，目标与记录已保留；可继续任务。")
                 self.repair_history(session)
@@ -138,6 +145,35 @@ class Workspace:
                 if call["id"] not in results:
                     fixed.append({"role": "tool", "tool_call_id": call["id"], "content": dumps({"error": "中断：未确认完成，请先检查文件和命令记录。"})})
         session["history"] = fixed
+
+    @staticmethod
+    def normalize_checkpoint(task):
+        checkpoint = task.setdefault("checkpoint", {})
+        if not isinstance(checkpoint, dict):
+            checkpoint = task["checkpoint"] = {}
+        checkpoint.setdefault("evidence", [])
+        checkpoint.setdefault("todo", [])
+
+    def validate_checkpoint_evidence(self, session):
+        task = session.get("task") or {}
+        self.normalize_checkpoint(task)
+        project = self.project(session["projectId"])
+        current_fingerprint = None
+        for item in task["checkpoint"].get("evidence", []):
+            if not isinstance(item, dict):
+                continue
+            if item.get("path") and item.get("digest"):
+                try:
+                    current = digest(self.read_source(project, item["path"]))
+                except (AppError, OSError):
+                    current = None
+                item["valid"] = current == item["digest"]
+            elif item.get("commandId"):
+                command = next((c for c in session["commands"] if c.get("id") == item["commandId"]), None)
+                if current_fingerprint is None:
+                    current_fingerprint = self.fingerprint(project)
+                item["valid"] = bool(command and command.get("status") == "passed" and not command.get("stale")
+                                         and command.get("fingerprint") == current_fingerprint)
 
     def encrypt(self, text):
         iv = os.urandom(12)
@@ -177,7 +213,7 @@ class Workspace:
         raise AppError(label + "不存在。", 404)
 
     def state(self):
-        return {"skills": self.skills.list(), "projects": copy.deepcopy(self.data["projects"]), "providers": [self.public_provider(p) for p in self.data["providers"]],
+        return {"accessPolicy": copy.deepcopy(ACCESS_POLICY), "skills": self.skills.list(), "projects": copy.deepcopy(self.data["projects"]), "providers": [self.public_provider(p) for p in self.data["providers"]],
                 "sessions": [{**{k: s[k] for k in ["id", "projectId", "title", "status", "updatedAt", "providerId"]}, "archivedAt": s.get("archivedAt")} for s in self.data["sessions"]]}
 
     def import_project(self, path):
@@ -186,6 +222,8 @@ class Workspace:
         root = Path(path).resolve()
         if not root.is_dir() or root.parent == root:
             raise AppError("请选择存在的具体项目文件夹。")
+        if any(PRIVATE.search(part) for part in root.parts) or self.in_workspace_data(root):
+            raise AppError("不能导入敏感配置或工作台数据目录。", 403)
         for project in self.data["projects"]:
             if os.path.normcase(project["path"]) == os.path.normcase(str(root)):
                 return project
@@ -200,7 +238,7 @@ class Workspace:
         url = urlparse(str(data.get("baseUrl", "")))
         if url.scheme not in {"http", "https"} or not url.hostname or url.username or url.password or url.query or url.fragment:
             raise AppError("接口地址须为 HTTP(S)，不能包含账号、查询参数或片段。")
-        if not name or not model or data.get("protocol") not in {"compatible", "anthropic"}:
+        if not name or not model or data.get("protocol") not in {"compatible", "responses", "anthropic"}:
             raise AppError("请填写名称、模型并选择支持的接口协议。")
         key = data.get("apiKey", "")
         if not isinstance(key, str) or len(key) > 4096 or "\r" in key or "\n" in key:
@@ -222,6 +260,40 @@ class Workspace:
         self.save()
         return self.public_session(session)
 
+    def store_images(self, images):
+        stored = []
+        for metadata, raw in images:
+            item = {**metadata, "id": uid()}
+            atomic_write(self.data_dir / "images" / item["id"], raw)
+            stored.append(item)
+        return stored
+
+    def image_path(self, image):
+        if not re.fullmatch(r"[0-9a-f-]{36}", str(image.get("id", ""))):
+            raise AppError("图片记录无效。", 404)
+        path = self.data_dir / "images" / image["id"]
+        if not path.is_file():
+            raise AppError("图片已丢失，请重新添加图片。", 404)
+        return path
+
+    def session_image(self, session_id, image_id):
+        session = self.session(session_id)
+        image = next((image for message in session["messages"] for image in message.get("images", []) if image["id"] == image_id), None)
+        if image is None:
+            raise AppError("图片不存在。", 404)
+        return image, self.image_path(image)
+
+    def model_history(self, history):
+        result = []
+        for message in history:
+            item = {k: v for k, v in message.items() if k != "images"}
+            if message.get("images"):
+                images = [{"dataUrl": "data:" + image["mime"] + ";base64," + base64.b64encode(self.image_path(image).read_bytes()).decode("ascii")}
+                          for image in message["images"]]
+                item["content"] = image_content(message["content"], images)
+            result.append(item)
+        return result
+
     def archive_session(self, session_id, archived):
         session = self.session(session_id)
         if archived and (session_id in self.runs or session["status"] == "running" or self.pending(session)
@@ -232,6 +304,19 @@ class Workspace:
         self.record(session, "session_archived" if archived else "session_restored")
         self.save()
         return self.public_session(session)
+
+    def in_workspace_data(self, path):
+        return Path(path).resolve().is_relative_to(self.data_dir.resolve())
+
+    def check_task_scope(self, session, provider=None):
+        task = session.get("task") or {}
+        scope = task.get("accessScope")
+        if not scope:  # Legacy tasks acquire an explicit scope at their next resume.
+            return
+        if self.project(session["projectId"])["path"] != scope["root"]:
+            raise AppError("任务授权目录已变化，请新建任务。", 409)
+        if provider is not None and any(provider.get(key) != scope["model"].get(key) for key in ("baseUrl", "protocol", "model")):
+            raise AppError("模型接口或模型已变化，请新建任务以确认新的数据发送范围。", 409)
 
     def safe_path(self, project, path):
         if not isinstance(path, str) or not path or Path(path).is_absolute() or PureWindowsPath(path).is_absolute() or re.search(r'[\x00-\x1f:*?"<>|]', path):
@@ -249,6 +334,8 @@ class Workspace:
                 raise AppError("不支持访问符号链接或目录联接。")
         if not candidate.resolve().is_relative_to(root):
             raise AppError("禁止访问项目外的文件。")
+        if self.in_workspace_data(candidate) or any(PRIVATE.search(part) for part in root.parts):
+            raise AppError("禁止访问敏感配置或工作台数据目录。", 403)
         return candidate
 
     def directory_entries(self, project, path=""):
@@ -258,7 +345,7 @@ class Workspace:
         output = []
         with os.scandir(root) as entries:
             for entry in entries:
-                if excluded(entry.name) or entry.is_symlink():
+                if excluded(entry.name) or entry.is_symlink() or self.in_workspace_data(entry.path):
                     continue
                 if getattr(entry.stat(follow_symlinks=False), "st_file_attributes", 0) & 0x400:
                     continue
@@ -358,7 +445,11 @@ class Workspace:
             result.update((path + "\0" + checksum.hexdigest() + "\0").encode("utf-8"))
         return result.hexdigest()
 
-    def write_change(self, session, change):
+    def write_change(self, session, change, approved=False):
+        task = require_change_task(session, change)
+        self.check_task_scope(session)
+        if not task["permissions"]["edits"] and not approved:
+            raise AppError("文件修改尚未获得本次批准。", 403)
         project = self.project(session["projectId"])
         target = self.safe_path(project, change["path"])
         try:
@@ -411,6 +502,7 @@ class Workspace:
 
     async def execute(self, session, name, args, stop=None):
         project, task = self.project(session["projectId"]), session.get("task")
+        self.check_task_scope(session)
         if stop and stop.is_set():
             raise AppError("任务已停止。")
         if name == "list_files":
@@ -456,12 +548,33 @@ class Workspace:
         if name == "update_plan":
             if any(not isinstance(args.get(k), str) or not args[k].strip() for k in ["summary", "criteria", "next_action"]):
                 raise AppError("计划必须包含理解、完成标准和下一步。")
-            task["checkpoint"] = {k: str(args.get(k, ""))[:2000] for k in ["summary", "criteria", "next_action", "failure"]}
+            previous = task.get("checkpoint", {})
+            evidence = args.get("evidence", previous.get("evidence", []))
+            todo = args.get("todo", previous.get("todo", []))
+            if not isinstance(evidence, list) or len(evidence) > 12:
+                raise AppError("证据须为最多 12 项的简短事实列表。")
+            if not isinstance(todo, list) or len(todo) > 12 or any(not isinstance(item, str) or not item.strip() for item in todo):
+                raise AppError("待办须为最多 12 项的非空简短步骤。")
+            clean_evidence = []
+            for item in evidence:
+                if not isinstance(item, dict) or not isinstance(item.get("claim"), str) or not item["claim"].strip() or not isinstance(item.get("source"), str) or not item["source"].strip():
+                    raise AppError("每项证据都须包含事实 claim 和来源 source。")
+                fact = {"claim": item["claim"][:500], "source": item["source"][:200]}
+                for key, limit in [("path", 500), ("digest", 128), ("commandId", 100)]:
+                    if item.get(key):
+                        if not isinstance(item[key], str):
+                            raise AppError("证据来源字段格式无效。")
+                        fact[key] = item[key][:limit]
+                clean_evidence.append(fact)
+            task["checkpoint"] = {**{k: str(args.get(k, ""))[:2000] for k in ["summary", "criteria", "next_action", "failure"]},
+                                      "evidence": clean_evidence, "todo": [item[:300] for item in todo]}
             task["phase"] = "context"
+            self.record(session, "checkpoint_saved", checkpoint=task["checkpoint"])
+            self.save()
             return {"checkpoint": task["checkpoint"], "userAcceptance": task["acceptance"]}
         if name == "propose_file":
-            if task["kind"] == "inspect":
-                raise AppError("只读分析不能写入或生成变更。")
+            require_change_task(session)
+            self.check_task_scope(session)
             if any(c["status"] in {"running", "queued"} for c in session["commands"]):
                 raise AppError("检查进程尚未退出，请先观察 command_result。")
             path = args["path"].replace("\\", "/")
@@ -501,8 +614,6 @@ class Workspace:
                 task["metrics"]["interventions"] += 1
             return {"path": path, "changeId": change["id"], "status": "applied" if change["status"] == "applied" else "pending_review"}
         if name == "run_command":
-            if task["kind"] == "inspect":
-                raise AppError("只读分析不能执行项目代码。")
             return self.queue_command(session, args)
         if name == "command_result":
             command = self.find(session["commands"], args.get("id"), "命令")
@@ -544,10 +655,12 @@ class Workspace:
                     raise AppError("尚未读取项目源码，不能完成分析。")
             else:
                 fingerprint = self.fingerprint(project)
-                checks = [c for c in session["commands"] if c["taskId"] == task["id"] and (c["command"] == "node" and c["args"][0] == "--test" or c["command"] == "npm" and c["args"] in [["test"], ["run", "test"]])]
+                checks = [c for c in session["commands"] if c["taskId"] == task["id"] and is_behavior_check(c["command"], c["args"])]
                 check = checks[-1] if checks else None
                 if not check or check["status"] != "passed" or check.get("stale") or check["fingerprint"] != fingerprint:
                     raise AppError("缺少当前源码的成功行为测试，请执行实际测试并根据失败修正。")
+                if check["command"] == "python" and check.get("environment") != python_environment(project["path"]):
+                    raise AppError("Python 环境已变化，请在当前环境重新运行行为测试。")
                 latest = {}
                 for command in session["commands"]:
                     if command["taskId"] == task["id"] and command["fingerprint"] == fingerprint and command["status"] != "denied":
@@ -567,6 +680,7 @@ class Workspace:
 
     def end_attempt(self, session, status, code, reason, **details):
         task = session["task"]
+        self.validate_checkpoint_evidence(session)
         outcome = {"status": status, "code": code, "reason": str(reason)[:2000], "retryable": status == "failed", "at": now(),
                    **{key: str(value)[:4000] for key, value in details.items()}}
         session.update(status=status, error=outcome["reason"] if status == "failed" else "")
@@ -581,23 +695,40 @@ class Workspace:
         return outcome
 
     def queue_command(self, session, args):
+        require_change_task(session)
+        self.check_task_scope(session)
         validate_command(args.get("command"), args.get("args"))
         if not str(args.get("purpose", "")).strip():
             raise AppError("请说明命令验证目的。")
         if self.pending(session) or any(c["status"] in ACTIVE_COMMANDS for c in session["commands"]):
             raise AppError("请先处理待审核变更或未结束命令。")
         project, task = self.project(session["projectId"]), session["task"]
+        self.safe_path(project, "README.md")
         if args["command"] == "node":
             for path in args["args"][1:]:
                 self.safe_path(project, path)
+        environment = None
+        if args["command"] == "python":
+            _, paths = python_check(args["args"])
+            for path in paths:
+                if path == ".":
+                    self.safe_path(project, "README.md")  # Also validate the current project root.
+                else:
+                    self.safe_path(project, path)
+            environment = python_environment(project["path"])
         script = ""
         if args["command"] == "npm":
             pkg = json.loads(self.read_source(project, "package.json"))
-            script = pkg.get("scripts", {}).get("test" if args["args"] == ["test"] else args["args"][1])
+            script_name = "test" if args["args"] == ["test"] else args["args"][1]
+            scripts = pkg.get("scripts", {})
+            script = scripts.get(script_name)
             if not isinstance(script, str):
                 raise AppError("项目没有配置此检查脚本。")
+            script = "\n".join(f"{key}: {scripts[key]}" for key in ("pre" + script_name, script_name, "post" + script_name) if isinstance(scripts.get(key), str))
         fingerprint = self.fingerprint(project)
         signature = dumps([args["command"], args["args"], fingerprint])
+        if environment:
+            signature = dumps([args["command"], args["args"], fingerprint, environment])
         duplicate = next((c for c in reversed(session["commands"]) if c["taskId"] == task["id"] and c["signature"] == signature), None)
         if duplicate and args.get("retry_id") != duplicate["id"]:
             return {**duplicate, "deduplicated": True, "message": "检查结果后明确指定 retry_id 才会重试。"}
@@ -608,6 +739,9 @@ class Workspace:
         command = {"id": uid(), "taskId": task["id"], "attempt": task.get("attempt", 1), "command": args["command"], "args": args["args"], "purpose": args["purpose"][:1000], "script": script,
                    "signature": signature, "fingerprint": fingerprint, "timeoutMs": min(120000, max(100, int(args.get("timeout_ms", 60000)))),
                    "status": "queued" if task["permissions"]["commands"] else "pending_approval", "output": "", "bytes": 0, "truncated": False, "createdAt": now(), "exitCode": None}
+        if environment:
+            command["environment"] = environment
+            command["script"] = "Python: " + environment["executable"] + " (" + environment["source"] + ")"
         session["commands"].append(command)
         task["phase"] = "verify"
         if command["status"] == "pending_approval":
@@ -618,7 +752,29 @@ class Workspace:
             self.launch_command(session, command)
         return command
 
+    def validate_command_scope(self, session, command):
+        require_change_task(session, command)
+        self.check_task_scope(session)
+        validate_command(command.get("command"), command.get("args"))
+        project = self.project(session["projectId"])
+        self.safe_path(project, "README.md")  # Validate root even for discovery commands.
+        if command["command"] == "node":
+            paths = command["args"][1:]
+        elif command["command"] == "python":
+            _, paths = python_check(command["args"])
+        else:
+            paths = ["package.json"]
+        for path in paths:
+            if path != ".":
+                self.safe_path(project, path)
+
     def launch_command(self, session, command):
+        task = require_change_task(session, command)
+        self.validate_command_scope(session, command)
+        if command.get("status") not in {"queued", "pending_approval"}:
+            raise AppError("命令已启动或结束，不能重复执行。", 409)
+        if not task["permissions"]["commands"] and command.get("approved") is not True:
+            raise AppError("命令尚未获得本次批准。", 403)
         stop = asyncio.Event()
         self.command_stops[command["id"]] = stop
         command.update(status="running", startedAt=now())
@@ -626,10 +782,15 @@ class Workspace:
 
         async def execute():
             try:
+                self.validate_command_scope(session, command)
+                if self.fingerprint(self.project(session["projectId"])) != command["fingerprint"]:
+                    raise AppError("执行前源码已变化，请重新申请检查命令。", 409)
+                if command["command"] == "python" and python_environment(self.project(session["projectId"])["path"]) != command.get("environment"):
+                    raise AppError("Python 环境已变化，请重新申请检查命令。")
                 command.update(await run_process(command["command"], command["args"], self.project(session["projectId"])["path"], stop,
                                                  command["timeoutMs"], lambda output: command.update(output)))
                 command["stale"] = self.fingerprint(self.project(session["projectId"])) != command["fingerprint"]
-                if command["command"] == "node" and command["args"][0] == "--test" and command["status"] == "passed" and not command.get("passedTests", 0):
+                if command["command"] in {"node", "python"} and is_behavior_check(command["command"], command["args"]) and command["status"] == "passed" and not command.get("passedTests", 0):
                     command.update(status="failed", error="没有发现测试用例成功执行的证据。")
                 if command["status"] != "passed":
                     session["task"]["metrics"]["failedCommands"] += 1
@@ -651,27 +812,37 @@ class Workspace:
             raise AppError("请先处理当前待审核工作。", 409)
         provider = self.find(self.data["providers"], data.get("providerId"), "模型配置")
         message = data.get("message")
-        if not isinstance(message, str) or not message.strip() or len(message) > 16000:
-            raise AppError("请输入不超过 16000 字的任务。")
-        skill_snapshot = self.skills.snapshot(data.get("skillId", DEFAULT_SKILL))
+        images = validate_images(data.get("images"))
+        if not isinstance(message, str) or len(message) > 16000 or not message.strip() and not images:
+            raise AppError("请输入不超过 16000 字的任务，或添加图片。")
+        message = message.strip() or "请分析所附图片，并结合当前项目说明。"
+        if data.get("kind") not in (None, "auto", "inspect", "change"):
+            raise AppError("任务类型无效。")
+        kind = task_kind(message, data.get("kind"))
+        permissions = task_permissions(kind, data.get("permissions"))
+        skill_snapshot = self.skills.snapshot(data.get("skillId", DEFAULT_SKILL), goal=message, kind=kind)
         session.update(providerId=provider["id"], error="")
         if not session["messages"]:
             session["title"] = message.strip()[:30]
         if session.get("task"):
             session.setdefault("tasks", []).append(session["task"])
-        permissions = data.get("permissions") or {}
-        session["task"] = {"id": uid(), "goal": message.strip(), "acceptance": str(data.get("acceptance") or message)[:4000], "kind": task_kind(message, data.get("kind")),
+        session["task"] = {"id": uid(), "goal": message.strip(), "acceptance": str(data.get("acceptance") or message)[:4000], "kind": kind,
                            "requestedKind": data.get("kind") if data.get("kind") in ("inspect", "change") else "auto",
-                           "permissions": {"edits": permissions.get("edits") is True, "commands": permissions.get("commands") is True}, "phase": "understand", "revision": 0,
+                           "permissions": permissions, "accessScope": {"policyVersion": ACCESS_POLICY["version"], "root": self.project(session["projectId"])["path"], "model": {k: provider[k] for k in ("baseUrl", "model", "protocol")}}, "phase": "understand", "revision": 0,
                            "rounds": 0, "calls": 0, "startedAt": now(), "metrics": {"inputTokens": 0, "outputTokens": 0, "modelMs": 0, "failedCommands": 0, "interventions": 0}}
         if skill_snapshot:
             session["task"]["_skillSnapshot"] = skill_snapshot
             session["task"]["skill"] = copy.deepcopy(skill_snapshot["metadata"])
-        session["observations"], session["history"] = {}, [{"role": "user", "content": message.strip()}]
-        session["messages"].append({"role": "user", "content": message.strip()})
+        user_message = {"role": "user", "content": message.strip()}
+        if images:
+            user_message["images"] = self.store_images(images)
+        session["observations"], session["history"] = {}, [copy.deepcopy(user_message)]
+        session["messages"].append(user_message)
         self.record(session, "task_started", task=session["task"])
         if skill_snapshot:
             self.record(session, "skill_activated", skill=session["task"]["skill"])
+            for path in session["task"]["skill"]["loadedResources"]:
+                self.record(session, "skill_resource_loaded", skillId=session["task"]["skill"]["id"], version=session["task"]["skill"]["version"], path=path, digest=digest(skill_snapshot["resources"][path]), automatic=True)
         return self.begin_run(session, provider)
 
     async def resume_run(self, session_id, data=None):
@@ -681,11 +852,17 @@ class Workspace:
         self.assert_idle(session["projectId"], session_id, allow_command=True)
         if not session.get("task") or session["status"] == "completed" or self.pending(session):
             raise AppError("请先处理审核，确认当前有可继续的任务。", 409)
-        feedback = (data or {}).get("feedback")
-        if session["status"] == "awaiting_user" and (not isinstance(feedback, str) or not feedback.strip()):
+        feedback = (data or {}).get("feedback", "")
+        images = validate_images((data or {}).get("images"))
+        if not isinstance(feedback, str) or len(feedback) > 16000:
+            raise AppError("反馈不能超过 16000 字。")
+        if session["status"] == "awaiting_user" and not feedback.strip() and not images:
             raise AppError("请先在输入框回答当前问题，再继续任务。", 409)
         provider = self.find(self.data["providers"], session["providerId"], "原模型配置")
+        self.check_task_scope(session, provider)
         task = session["task"]
+        if not task.get("accessScope"):
+            task["accessScope"] = {"policyVersion": ACCESS_POLICY["version"], "root": self.project(session["projectId"])["path"], "model": {k: provider[k] for k in ("baseUrl", "model", "protocol")}}
         if session["status"] in {"failed", "stopped", "awaiting_user"}:
             if task.get("outcome"):
                 task["attempts"] = [*task.get("attempts", [])[-9:], task["outcome"]]
@@ -697,14 +874,17 @@ class Workspace:
         if ("requestedKind" not in task and task["kind"] == "change" and task_kind(task["goal"]) == "inspect"
                 and not any(c.get("taskId") == task["id"] for c in [*session["changes"], *session["commands"]])):
             task.update(kind="inspect", requestedKind="auto")
+            task["permissions"] = {"edits": False, "commands": False}
             self.record(session, "task_mode_corrected", kind="inspect", reason="legacy review without changes or commands")
         self.repair_history(session)
         session["error"] = ""
-        session["history"].append({"role": "user", "content": "继续同一目标。先检查计划、文件和命令结果；中断结果未知，不得假设成功。"})
-        feedback = (data or {}).get("feedback")
-        if isinstance(feedback, str) and feedback.strip():
-            session["history"].append({"role": "user", "content": "用户反馈：" + feedback[:16000]})
-            session["messages"].append({"role": "user", "content": feedback[:16000]})
+        session["history"].append({"role": "user", "content": "继续同一目标。先使用 Persisted task state 中已保存的计划、证据和待办；有效证据避免重复读取或重复验证。无效文件证据须重新读取，命令结果未知须检查当前命令记录并按需重试，不得假设成功。"})
+        if feedback.strip() or images:
+            user_message = {"role": "user", "content": feedback.strip() or "请参考补充图片。"}
+            if images:
+                user_message["images"] = self.store_images(images)
+            session["history"].append(copy.deepcopy(user_message))
+            session["messages"].append(user_message)
         self.record(session, "task_resumed")
         return self.begin_run(session, provider)
 
@@ -743,7 +923,9 @@ class Workspace:
                         elif command["status"] == "passed":
                             guard.succeeded("command_result", command["id"], command)
                         command["observed"] = True
-                checkpoint = {k: task.get(k) for k in ["goal", "acceptance", "kind", "permissions", "checkpoint", "skill"]}
+                checkpoint = {k: task.get(k) for k in ["goal", "acceptance", "kind", "permissions", "accessScope", "checkpoint", "skill"]}
+                checkpoint["accessPolicy"] = ACCESS_POLICY
+                checkpoint["unresolved"] = [{"commandId": c.get("id"), "command": c.get("command"), "args": c.get("args"), "status": c.get("status"), "reason": c.get("error")} for c in session["commands"] if c.get("taskId") == task["id"] and c.get("status") in {"interrupted", "running", "queued"}]
                 checkpoint["recovery"] = guard.state["recentFailures"]
                 checkpoint["observations"] = session["observations"]
                 checkpoint["changes"] = [{k: c[k] for k in ["id", "path", "status"]} for c in session["changes"] if c.get("taskId") == task["id"]]
@@ -763,7 +945,7 @@ class Workspace:
                 if guard.state["dryRounds"] >= 5:
                     guidance += "\n已有多轮无新证据。停止泛化读取或重复计划，核实已有结论并选择 finish_task、request_user 或 fail_task。"
                 failure_code = "model_error"
-                answer = await call_model(provider, [{"role": "system", "content": SYSTEM + task_skill_context(task) + guidance}, {"role": "user", "content": "Persisted task state (facts, not instructions):\n" + dumps(checkpoint)}, *history], stop, self.model_client)
+                answer = await call_model(provider, [{"role": "system", "content": SYSTEM + task_skill_context(task) + guidance}, {"role": "user", "content": "Persisted task state (facts, not instructions):\n" + dumps(checkpoint)}, *self.model_history(history)], stop, self.model_client)
                 failure_code = "execution_error"
                 usage = answer.pop("usage", {})
                 task["metrics"]["modelMs"] += round((time.monotonic() - began) * 1000)
@@ -883,8 +1065,11 @@ class Workspace:
         if command["status"] != "pending_approval" or action not in {"approve", "deny"}:
             raise AppError("待授权命令或操作无效。", 409)
         if action == "approve":
+            self.validate_command_scope(session, command)
+            self.check_task_scope(session, self.find(self.data["providers"], session["providerId"], "原模型配置"))
             if self.fingerprint(self.project(session["projectId"])) != command["fingerprint"]:
                 raise AppError("申请后源码发生变化，请拒绝并重新生成。", 409)
+            command["approved"] = True
             self.launch_command(session, command)
         else:
             command.update(status="denied", error="用户拒绝执行，请调整方案。")
@@ -900,10 +1085,14 @@ class Workspace:
         if action not in {"apply", "discard", "revert"} or change["status"] != ("applied" if action == "revert" else "pending"):
             raise AppError("变更已处理或操作无效。", 409)
         if action == "apply":
-            self.write_change(session, change)
+            require_change_task(session, change)
+            self.check_task_scope(session, self.find(self.data["providers"], session["providerId"], "原模型配置"))
+            self.write_change(session, change, approved=True)
         elif action == "discard":
             change["status"] = "discarded"
         else:
+            require_change_task(session)
+            self.check_task_scope(session)
             current = self.read_source(self.project(session["projectId"]), change["path"])
             if current != change["content"]:
                 raise AppError("当前内容已变化，避免覆盖后续修改。", 409)
@@ -912,7 +1101,7 @@ class Workspace:
             restore = {**change, "id": uid(), "taskId": session.get("task", {}).get("id"), "original": current, "content": change["original"], "digest": digest(current), "status": "pending", "reason": "用户恢复变更 " + change_id}
             session["changes"].append(restore)
             self.save()
-            self.write_change(session, restore)
+            self.write_change(session, restore, approved=True)
             change["status"] = "reverted"
             if session.get("task"):
                 session["task"].update(review=None, finishedAt=None)
@@ -924,6 +1113,23 @@ class Workspace:
         if action != "revert" and session.get("task") and not self.pending(session):
             return await self.resume_run(session_id)
         return self.public_session(session)
+
+    def change_diff(self, session_id, change_id):
+        session = self.session(session_id)
+        change = self.find(session["changes"], change_id, "变更")
+        if change["status"] not in {"pending", "applied", "reverted"}:
+            raise AppError("此变更已放弃，当前没有可审阅的差异。", 409)
+        before = change["original"] or ""
+        after = change["content"]
+        lines = list(difflib.unified_diff(before.splitlines(keepends=True), after.splitlines(keepends=True),
+                                          fromfile="a/" + change["path"], tofile="b/" + change["path"], n=3))
+        additions = sum(line.startswith("+") and not line.startswith("+++") for line in lines)
+        deletions = sum(line.startswith("-") and not line.startswith("---") for line in lines)
+        diff = "".join(lines)
+        too_large = len(diff.encode("utf-8")) > 24000
+        return {"changeId": change_id, "path": change["path"], "status": change["status"],
+                "additions": additions, "deletions": deletions, "tooLarge": too_large,
+                "diff": None if too_large else diff}
 
     async def stop(self, session_id):
         session = self.session(session_id)
@@ -1016,5 +1222,7 @@ class Workspace:
             if len(segments) == 4 and action == "commands":
                 return await self.command_decision(session_id, segments[3], data.get("action"))
             if len(segments) == 4 and action == "changes":
+                if segments[3] == "diff":
+                    return self.change_diff(session_id, data.get("changeId"))
                 return await self.apply_change(session_id, segments[3], data.get("action"))
         raise AppError("接口不存在。", 404)

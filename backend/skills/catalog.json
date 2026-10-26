@@ -2,8 +2,16 @@
   {
     "id": "software-development",
     "name": "软件开发",
-    "version": "1.0.1",
-    "description": "用于代码分析、功能开发、缺陷修复、重构和代码审查；按项目技术栈读取补充指引。",
-    "resources": ["references/javascript-node.md", "references/python.md", "references/code-review.md"]
+    "version": "1.1.0",
+    "description": "按任务加载审查、分析、修复、功能开发或重构流程；语言指引按需读取。",
+    "resources": ["references/javascript-node.md", "references/python.md", "references/code-review.md", "references/code-analysis.md", "references/bug-fix.md", "references/feature-development.md", "references/refactoring.md"],
+    "workflows": [
+      {"id": "code-review", "name": "代码审查", "resources": ["references/code-review.md"]},
+      {"id": "code-analysis", "name": "问题分析", "resources": ["references/code-analysis.md"]},
+      {"id": "bug-fix", "name": "问题修复", "resources": ["references/bug-fix.md"]},
+      {"id": "feature-development", "name": "功能开发", "resources": ["references/feature-development.md"]},
+      {"id": "refactoring", "name": "代码重构", "resources": ["references/refactoring.md"]},
+      {"id": "general-development", "name": "综合开发", "resources": []}
+    ]
   }
 ]

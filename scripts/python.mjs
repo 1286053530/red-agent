@@ -13,7 +13,8 @@ const commands = {
     '--add-data',join(root,'backend/tools.json')+ ';backend',
     '--add-data',join(root,'backend/BASE.md')+ ';backend',
     '--add-data',join(root,'backend/skills')+';backend/skills',
-    '--add-data',join(root,'backend/agent-test-reporter.mjs')+';backend','scripts/backend_entry.py']
+    '--add-data',join(root,'backend/agent-test-reporter.mjs')+';backend',
+    '--add-data',join(root,'backend/agent-python-runner.py')+';backend','scripts/backend_entry.py']
 };
 const args=commands[process.argv[2]];
 if(!args)throw new Error('Expected serve, test or build');

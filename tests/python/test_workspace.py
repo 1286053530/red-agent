@@ -38,7 +38,7 @@ async def test_real_agent_loop_failed_fix_then_correction(workspace):
     assert observed and not steps
     assert [(c["status"], c["exitCode"]) for c in s["commands"]] == [("failed", 1), ("passed", 0)]
     assert s["task"]["metrics"]["inputTokens"] == expected_rounds * 10
-    assert s["task"]["skill"]["loadedResources"] == ["references/javascript-node.md"]
+    assert s["task"]["skill"]["loadedResources"] == ["references/bug-fix.md", "references/javascript-node.md"]
     assert "a+b" in (Path(project["path"]) / "app.mjs").read_text()
     events = [json.loads(line) for line in (w.data_dir / "runs" / (s["task"]["id"] + ".jsonl")).read_text(encoding="utf-8").splitlines()]
     assert events[-1]["type"] == "task_completed"
@@ -144,21 +144,68 @@ async def test_diff_includes_tail_changes_after_first_6000_characters(workspace)
     assert not review["incomplete"] and "-export const answer=1" in review["changes"][0]["diff"] and "+export const answer=2" in review["changes"][0]["diff"]
 
 
+async def test_change_diff_is_a_bounded_line_patch_and_reject_preserves_user_file(workspace):
+    w, project, _, s = workspace
+    source = Path(project["path"]) / "app.mjs"
+    before = source.read_text(encoding="utf-8")
+    await prepare(w, _, s)
+    await w.execute(s, "read_file", {"path": "app.mjs"})
+    proposal = await w.execute(s, "propose_file", {
+        "path": "app.mjs", "content": "// 保留用户代码\nexport const add=(a,b)=>a+b;\n", "reason": "修复求和逻辑"})
+    assert proposal["status"] == "pending_review"
+    diff = w.change_diff(s["id"], proposal["changeId"])
+    assert diff["status"] == "pending" and diff["additions"] == 2 and diff["deletions"] == 1
+    assert "-export const add=(a,b)=>a-b;" in diff["diff"]
+    assert "+// 保留用户代码" in diff["diff"]
+    endpoint = await w.handle("POST", ["sessions", s["id"], "changes", "diff"],
+                              {"changeId": proposal["changeId"]}, {})
+    assert endpoint == diff
+    assert source.read_text(encoding="utf-8") == before
+    await w.apply_change(s["id"], proposal["changeId"], "discard")
+    assert source.read_text(encoding="utf-8") == before
+    with pytest.raises(AppError, match="已放弃"):
+        w.change_diff(s["id"], proposal["changeId"])
+
+
+async def test_diff_endpoint_reports_counts_and_refuses_to_return_oversized_diff(workspace):
+    w, project, _, s = workspace
+    root = Path(project["path"])
+    path = root / "large.txt"
+    path.write_text("same line\n" * 4000, encoding="utf-8")
+    await prepare(w, _, s)
+    page = await w.execute(s, "read_file", {"path": "large.txt"})
+    # All pages are required before whole-file replacement.
+    offset = page["next_offset"]
+    while page["hasMore"]:
+        page = await w.execute(s, "read_file", {"path": "large.txt", "offset": offset})
+        offset = page["next_offset"]
+    proposal = await w.execute(s, "propose_file", {"path": "large.txt", "content": "changed\n" * 4000, "reason": "large"})
+    result = w.change_diff(s["id"], proposal["changeId"])
+    assert result["tooLarge"] and result["diff"] is None
+
+
 async def test_conflicts_restoration_and_restart(workspace):
     w, project, provider, s = workspace
     await prepare(w, provider, s)
     await w.execute(s, "read_file", {"path": "app.mjs"})
     proposal = await w.execute(s, "propose_file", {"path": "app.mjs", "content": "export const add=(a,b)=>a+b;\n", "reason": "fix"})
     source = Path(project["path"]) / "app.mjs"
-    original = source.read_text()
+    original = w.read_source(project, "app.mjs")
+    original_bytes = source.read_bytes()
     source.write_text("external\n")
     with pytest.raises(AppError, match="其他地方修改"):
         await w.apply_change(s["id"], proposal["changeId"], "apply")
-    source.write_text(original)
+    source.write_bytes(original_bytes)
     await w.apply_change(s["id"], proposal["changeId"], "apply")
     await settle(w)
+    applied = s["changes"][-1]["content"]
+    source.write_text("user edit after apply\n")
+    with pytest.raises(AppError, match="避免覆盖"):
+        await w.apply_change(s["id"], proposal["changeId"], "revert")
+    assert source.read_text() == "user edit after apply\n"
+    source.write_text(applied, encoding="utf-8", newline="")
     await w.apply_change(s["id"], proposal["changeId"], "revert")
-    assert source.read_text() == original
+    assert w.read_source(project, "app.mjs") == original
     await w.execute(s, "update_plan", {**PLAN, "failure": "用户停止"})
     s["status"] = "running"
     s["commands"].append({"id": "unknown", "status": "running", "exitCode": None})
@@ -168,6 +215,38 @@ async def test_conflicts_restoration_and_restart(workspace):
     assert result["status"] == "stopped" and result["commands"][-1]["status"] == "interrupted"
     assert result["task"]["checkpoint"]["failure"] == "用户停止"
     await restored.shutdown()
+
+
+async def test_structured_checkpoint_persists_compact_evidence_and_todo(workspace):
+    w, project, _, s = workspace
+    await prepare(w, _, s)
+    content = w.read_source(project, "app.mjs")
+    from backend.common import digest
+    saved = await w.execute(s, "update_plan", {**PLAN, "evidence": [{
+        "claim": "加法函数当前使用减法", "source": "read_file", "path": "app.mjs", "digest": digest(content)
+    }], "todo": ["补充回归测试", "运行行为测试"]})
+    assert saved["checkpoint"]["todo"] == ["补充回归测试", "运行行为测试"]
+    restored = Workspace(w.data_dir)
+    checkpoint = restored.session(s["id"])["task"]["checkpoint"]
+    assert checkpoint["evidence"][0]["claim"] == "加法函数当前使用减法"
+    assert checkpoint["todo"] == ["补充回归测试", "运行行为测试"]
+    events = (w.data_dir / "runs" / (s["task"]["id"] + ".jsonl")).read_text(encoding="utf-8")
+    assert "checkpoint_saved" in events
+    await restored.shutdown()
+
+
+async def test_resume_marks_changed_file_evidence_stale(workspace):
+    w, project, _, s = workspace
+    await prepare(w, _, s)
+    from backend.common import digest
+    content = w.read_source(project, "app.mjs")
+    await w.execute(s, "update_plan", {**PLAN, "evidence": [{
+        "claim": "源码使用减法", "source": "read_file", "path": "app.mjs", "digest": digest(content)
+    }], "todo": ["重新确认源码"]})
+    (Path(project["path"]) / "app.mjs").write_text("external change\n", encoding="utf-8")
+    w.validate_checkpoint_evidence(s)
+    assert s["task"]["checkpoint"]["evidence"][0]["valid"] is False
+    assert s["task"]["checkpoint"]["todo"] == ["重新确认源码"]
 
 
 async def test_node_state_and_encryption_compatibility(workspace):

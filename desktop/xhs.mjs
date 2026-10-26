@@ -1,6 +1,7 @@
 import { session, WebContentsView } from 'electron';
 
 const HOME = 'https://www.xiaohongshu.com/explore';
+const PAGE_ZOOM = 0.8;
 const DISABLED = '自动化访问已停用，请在官方页面中手动操作。';
 class AccountError extends Error { constructor(message,status=410){super(message);this.status=status;} }
 
@@ -22,6 +23,7 @@ export class DesktopXhs {
     this.error = '';
     this.clearing = false;
     this.bounds = null;
+    this.zoomFactor = PAGE_ZOOM;
     const profile = session.fromPartition(partition);
     // An explicitly opened page may keep its normal connections while retained.
     // Closing it still blocks all subsequent partition traffic, including workers.
@@ -49,8 +51,15 @@ export class DesktopXhs {
     this.resize();
     return {updated:true};
   }
+  setZoomFactor(factor) {
+    if(!Number.isFinite(factor)||factor<0.5||factor>PAGE_ZOOM)throw new AccountError('页面缩放应在 50% 至 80% 之间。',400);
+    if(!this.view||this.view.webContents.isDestroyed())throw new AccountError('请先打开官网。',409);
+    this.zoomFactor=Math.round(factor*100)/100;
+    this.view.webContents.setZoomFactor(this.zoomFactor);
+    this.notify();return {zoomFactor:this.zoomFactor};
+  }
   notify() {
-    if(this.win&&!this.win.isDestroyed())this.win.webContents.send('xhs:view',{visible:this.visible,retained:!!this.view&&!this.view.webContents.isDestroyed(),error:this.error,url:this.view?.webContents.getURL()||HOME});
+    if(this.win&&!this.win.isDestroyed())this.win.webContents.send('xhs:view',{visible:this.visible,retained:!!this.view&&!this.view.webContents.isDestroyed(),error:this.error,url:this.view?.webContents.getURL()||HOME,zoomFactor:this.zoomFactor});
   }
   show() {
     if(!this.view||this.view.webContents.isDestroyed())return {opened:false,retained:false};
@@ -83,6 +92,8 @@ export class DesktopXhs {
     const view=new WebContentsView({webPreferences:{partition:this.partition,nodeIntegration:false,contextIsolation:true,sandbox:true}});
     this.view=view;this.visible=true;this.requestedVisible=true;this.error='';
     const wc=view.webContents;
+    wc.setZoomFactor(this.zoomFactor);
+    wc.on('did-finish-load',()=>wc.setZoomFactor(this.zoomFactor));
     wc.setWindowOpenHandler(({url})=>{
       if(!this.visible)return {action:'deny'};
       if(!officialUrl(url)){this.error='已阻止站外链接，仅支持在内嵌页访问小红书官网。';this.notify();return {action:'deny'};}

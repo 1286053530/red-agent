@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from backend.common import AppError
+from backend import model
 from backend.model import call_model
 from backend.server import create_app
 from conftest import ROOT, tool_call
@@ -63,9 +64,115 @@ async def test_openai_and_anthropic_protocols_and_failures():
             {"role": "tool", "tool_call_id": "one", "content": "{}"}], client=client)
         assert result["content"] == "done"
     for status in [401, 403, 404, 429, 500, 302]:
-        async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(status))) as client:
+        requests = []
+        async def rejected(request):
+            requests.append(request)
+            return httpx.Response(status)
+        async with httpx.AsyncClient(transport=httpx.MockTransport(rejected)) as client:
             with pytest.raises(AppError, match=str(status)):
                 await call_model(provider, [{"role": "user", "content": "test"}], client=client)
+        assert len(requests) == 1
+
+
+@pytest.mark.parametrize("success_attempt", [3, 5])
+async def test_model_connection_retries_recover(monkeypatch, success_attempt):
+    provider = {"baseUrl": "https://example.com/v1", "protocol": "compatible", "model": "fixture"}
+    monkeypatch.setattr(model, "MODEL_RETRY_DELAYS", (0, 0, 0, 0))
+    attempts = 0
+    bodies = []
+
+    async def recover(request):
+        nonlocal attempts
+        attempts += 1
+        bodies.append(request.content)
+        if attempts < success_attempt:
+            raise httpx.ConnectError("connection interrupted", request=request)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "reconnected"}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(recover)) as client:
+        answer = await call_model(provider, [{"role": "user", "content": "continue"}], client=client)
+    assert answer["content"] == "reconnected"
+    assert attempts == success_attempt
+    assert all(body == bodies[0] for body in bodies)
+
+
+@pytest.mark.parametrize("error_type, message", [(httpx.ConnectError, "连续 5 次无法连接"),
+    (httpx.ReadTimeout, "连续 5 次连接尝试均失败"), (httpx.RemoteProtocolError, "连续 5 次无法连接")])
+async def test_model_connection_stops_after_five_failures(monkeypatch, error_type, message):
+    provider = {"baseUrl": "https://example.com/v1", "protocol": "compatible", "model": "fixture"}
+    monkeypatch.setattr(model, "MODEL_RETRY_DELAYS", (0, 0, 0, 0))
+    attempts = 0
+
+    async def disconnected(request):
+        nonlocal attempts
+        attempts += 1
+        raise error_type("offline", request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(disconnected)) as client:
+        with pytest.raises(AppError, match=message):
+            await call_model(provider, [{"role": "user", "content": "continue"}], client=client)
+    assert attempts == 5
+
+
+async def test_model_retry_wait_can_be_stopped(monkeypatch):
+    provider = {"baseUrl": "https://example.com/v1", "protocol": "compatible", "model": "fixture"}
+    monkeypatch.setattr(model, "MODEL_RETRY_DELAYS", (30, 30, 30, 30))
+    waiting, cancelled = asyncio.Event(), asyncio.Event()
+    original_sleep = asyncio.sleep
+    attempts = 0
+
+    async def retry_sleep(delay):
+        if delay != 30:
+            return await original_sleep(delay)
+        waiting.set()
+        try:
+            await original_sleep(delay)
+        finally:
+            cancelled.set()
+
+    monkeypatch.setattr(model.asyncio, "sleep", retry_sleep)
+
+    async def disconnected(request):
+        nonlocal attempts
+        attempts += 1
+        raise httpx.ConnectError("offline", request=request)
+
+    stop = asyncio.Event()
+    async with httpx.AsyncClient(transport=httpx.MockTransport(disconnected)) as client:
+        task = asyncio.create_task(call_model(provider, [{"role": "user", "content": "continue"}], stop, client))
+        await asyncio.wait_for(waiting.wait(), timeout=1)
+        stop.set()
+        with pytest.raises(AppError, match="任务已停止"):
+            await asyncio.wait_for(task, timeout=1)
+    assert attempts == 1 and cancelled.is_set()
+
+
+@pytest.mark.parametrize("already_stopped", [False, True])
+async def test_model_stop_cancels_request_without_retries(already_stopped):
+    provider = {"baseUrl": "https://example.com/v1", "protocol": "compatible", "model": "fixture"}
+    started, cancelled, stop = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    attempts = 0
+
+    async def pending(request):
+        nonlocal attempts
+        attempts += 1
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    if already_stopped:
+        stop.set()
+    async with httpx.AsyncClient(transport=httpx.MockTransport(pending)) as client:
+        task = asyncio.create_task(call_model(provider, [], stop, client))
+        if not already_stopped:
+            await asyncio.wait_for(started.wait(), timeout=1)
+            stop.set()
+        with pytest.raises(AppError, match="任务已停止"):
+            await asyncio.wait_for(task, timeout=1)
+    assert attempts == (0 if already_stopped else 1)
+    assert cancelled.is_set() is not already_stopped
 
 
 async def test_developer_ui_uses_python_backend_and_exports_logs(workspace, live_server, tmp_path):
@@ -106,6 +213,11 @@ async def test_developer_ui_uses_python_backend_and_exports_logs(workspace, live
             release_model.set()
             await page.locator('.activity-rail [data-view="developer"]').click()
             await page.locator('[data-change-action="apply"]').wait_for(timeout=15000)
+            await page.locator('[data-diff-details] summary').first.click()
+            await page.locator('.dev-diff-code .added').wait_for(timeout=5000)
+            assert await page.locator('.dev-diff-summary').inner_text() == '−1 删除\n+1 新增\napp.mjs'
+            assert 'a-b' in await page.locator('.dev-diff-code .removed').inner_text()
+            assert 'a+b' in await page.locator('.dev-diff-code .added').inner_text()
             assert "a-b" in (Path(project["path"]) / "app.mjs").read_text()
             await page.click('[data-change-action="apply"]')
             await page.locator('[data-command-action="approve"]').wait_for(timeout=15000)
@@ -120,6 +232,7 @@ async def test_developer_ui_uses_python_backend_and_exports_logs(workspace, live
             assert report["entries"][-1]["type"] == "task_completed"
             assert report["task"]["skill"]["id"] == "software-development"
             assert "任务 Skill：软件开发" in await page.locator("#devExecution").inner_text()
+            assert "当前指引：问题修复" in await page.locator(".dev-active-skill").inner_text()
             assert await page.locator("#devTraceTabPanel #devExecution").count() == 1
             assert not await page.locator(".dev-agent-panel #devExecution").count()
             assert not await page.locator(".dev-session-status.running").count()

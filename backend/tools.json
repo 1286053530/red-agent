@@ -141,6 +141,29 @@
           "failure": {
             "type": "string",
             "description": "Last failure and planned correction"
+          },
+          "evidence": {
+            "type": "array",
+            "description": "Compact confirmed facts with provenance; do not copy source or command output. File evidence can include path and the digest returned by read_file. Command evidence can include commandId.",
+            "maxItems": 12,
+            "items": {
+              "type": "object",
+              "properties": {
+                "claim": {"type": "string", "maxLength": 500},
+                "source": {"type": "string", "maxLength": 200},
+                "path": {"type": "string", "maxLength": 500},
+                "digest": {"type": "string", "maxLength": 128},
+                "commandId": {"type": "string", "maxLength": 100}
+              },
+              "required": ["claim", "source"],
+              "additionalProperties": false
+            }
+          },
+          "todo": {
+            "type": "array",
+            "description": "Ordered concrete next steps, up to 12.",
+            "maxItems": 12,
+            "items": {"type": "string", "maxLength": 300}
           }
         },
         "required": [
@@ -156,7 +179,7 @@
     "type": "function",
     "function": {
       "name": "run_command",
-      "description": "Run a project verification command. node --test/--check or npm test/run test/build/lint/typecheck/check only. May await approval. Wait for actual exit; running is not success. Use command ID with command_result. No shell, installs, publish or arbitrary scripts.",
+      "description": "Run project verification: node --test/--check, npm test/run test/build/lint/typecheck/check, python -m pytest [relative paths/selectors] [-q/-v/-x/-k expr/-m marker/-c config/--ignore path/--tb=short/--maxfail=N/--collect-only], python -m unittest discover [-s dir/-t dir/-p pattern/-v/-q/-f/-b], python -m py_compile files, or python relative_script.py [args]. Uses project .venv/venv, configured SHUJIN_PROJECT_PYTHON or available Python. May await approval. Observe actual exit via command_result. Only real pytest/unittest successes count as Python behavior tests; syntax, scripts, collection and all-skipped runs do not. No shell, pip, installs or arbitrary modules.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -164,7 +187,8 @@
             "type": "string",
             "enum": [
               "node",
-              "npm"
+              "npm",
+              "python"
             ]
           },
           "args": {

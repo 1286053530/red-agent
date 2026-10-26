@@ -117,6 +117,35 @@ async def test_reported_failure_and_manual_retry(workspace):
     assert session['task']['attempts'][0]['code'] == 'reported_failure'
 
 
+async def test_resume_reuses_checkpoint_evidence_and_todo(workspace):
+    w, project, provider, session = workspace
+    from backend.common import digest
+    source = (Path(project['path']) / 'app.mjs').read_text(encoding='utf-8')
+    steps = [
+        ('update_plan', {**PLAN, 'evidence': [{'claim': '实现当前为减法', 'source': 'read_file', 'path': 'app.mjs', 'digest': digest(source)}], 'todo': ['检查现有回归测试']}),
+        ('fail_task', {'reason': '暂停以测试恢复', 'evidence': '已保存源码摘要和待办'})
+    ]
+    async def first_handler(request):
+        name, args = steps.pop(0)
+        return httpx.Response(200, json={'choices': [{'message': {'tool_calls': [tool_call(name, args)]}}]})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(first_handler)) as client:
+        w.model_client = client
+        await w.start_run(session['id'], {'providerId': provider['id'], 'message': '审查代码'})
+        await settle(w)
+    requests = []
+    async def resume_handler(request):
+        body = json.loads(request.content)
+        requests.append(body)
+        return httpx.Response(200, json={'choices': [{'message': {'tool_calls': [tool_call('request_user', {'reason': '用例在此结束', 'question': '是否继续？'})]}}]})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(resume_handler)) as client:
+        w.model_client = client
+        await w.resume_run(session['id'])
+        await settle(w)
+    prompt = json.dumps(requests[0]['messages'], ensure_ascii=False)
+    assert '检查现有回归测试' in prompt and '实现当前为减法' in prompt
+    assert '有效证据避免重复读取或重复验证' in prompt
+
+
 async def test_model_service_error_is_failure_not_user_question(workspace):
     w, _, provider, session = workspace
     async def handler(request):

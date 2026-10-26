@@ -7,12 +7,15 @@ from pathlib import Path
 import re
 import shutil
 import signal
+import tempfile
 import time
 
 from .common import AppError, now
+from .python_checks import python_check, python_environment
 
 CHECK_SCRIPTS = {"test", "build", "lint", "typecheck", "check"}
 REPORTER = Path(__file__).with_name("agent-test-reporter.mjs")
+PYTHON_RUNNER = Path(__file__).with_name("agent-python-runner.py")
 
 
 def validate_command(command, args):
@@ -25,7 +28,10 @@ def validate_command(command, args):
             return
     if command == "npm" and (args == ["test"] or len(args) == 2 and args[0] == "run" and args[1] in CHECK_SCRIPTS):
         return
-    raise AppError("仅支持 node --test / --check 与 npm test/build/lint/typecheck/check。")
+    if command == "python":
+        python_check(args)
+        return
+    raise AppError("仅支持受控的 Node/npm 和 Python 项目检查；不支持 shell 或依赖安装。")
 
 
 def bounded_history(history, max_chars=42000):
@@ -47,7 +53,11 @@ def bounded_history(history, max_chars=42000):
             break
         kept[0:0] = group
         size += length
-    return kept
+    # Images are small references here, not Base64. Keep their original user
+    # messages when older text/tool turns are compacted so visual evidence is
+    # still available on later rounds and after a restart.
+    discarded = history[:len(history) - len(kept)]
+    return [message for message in discarded if message.get("images")] + kept
 
 
 def child_environment():
@@ -70,7 +80,23 @@ def node_executable():
     return executable
 
 
-def command_argv(command, args, env):
+def command_argv(command, args, env, cwd=None, report=None):
+    if command == "python":
+        environment = python_environment(cwd)
+        executable = environment["executable"]
+        env.update(PYTHONUTF8="1", PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1")
+        if report:
+            # Never validate stale, same-size/same-second bytecode from a prior run.
+            # Keep project caches untouched and remove our private cache on exit.
+            env["PYTHONPYCACHEPREFIX"] = str(Path(report).parent / "pycache")
+            env["PYTHONDONTWRITEBYTECODE"] = "1"
+        env["PATH"] = str(Path(executable).parent) + os.pathsep + env.get("PATH", "")
+        if environment["source"] in {".venv", "venv"}:
+            env["VIRTUAL_ENV"] = str(Path(cwd) / environment["source"])
+        kind, _ = python_check(args)
+        if kind in {"pytest", "unittest"}:
+            return [executable, str(PYTHON_RUNNER), str(report), kind, *args[2:]]
+        return [executable, *args]
     node = node_executable()
     if os.environ.get("SHUJIN_NODE_IS_ELECTRON") == "1":
         env["ELECTRON_RUN_AS_NODE"] = "1"
@@ -117,6 +143,8 @@ async def run_process(command, args, cwd, stop=None, timeout_ms=60000, on_output
     output, byte_count, passed_tests = "", 0, None
     status, error, process = "", "", None
     reason = asyncio.Event()
+    evidence_dir = tempfile.TemporaryDirectory(prefix="shujin-check-") if command == "python" else None
+    report = Path(evidence_dir.name) / "evidence.json" if evidence_dir else None
 
     async def consume(stream):
         nonlocal output, byte_count, status
@@ -135,10 +163,12 @@ async def run_process(command, args, cwd, stop=None, timeout_ms=60000, on_output
                 reason.set()
 
     if stop and stop.is_set():
+        if evidence_dir:
+            evidence_dir.cleanup()
         return {"status": "interrupted", "exitCode": None, "output": "", "bytes": 0,
                 "passedTests": None, "truncated": False, "error": "执行前任务已停止。", "finishedAt": now(), "durationMs": 0}
     try:
-        argv = command_argv(command, args, env)
+        argv = command_argv(command, args, env, cwd, report)
         kwargs = {"creationflags": 0x08000000} if os.name == "nt" else {"start_new_session": True}
         process = await asyncio.create_subprocess_exec(
             *argv, cwd=str(cwd), env=env, stdin=asyncio.subprocess.DEVNULL,
@@ -166,7 +196,7 @@ async def run_process(command, args, cwd, stop=None, timeout_ms=60000, on_output
                     waiter.cancel()
             await asyncio.gather(*waiters, return_exceptions=True)
         status = status or ("passed" if process.returncode == 0 else "failed")
-        evidence = re.findall(r"SHUJIN_TEST_EVIDENCE (\{[^\n]+\})", output)
+        evidence = re.findall(r"SHUJIN_TEST_EVIDENCE (\{[^\n]+\})", output) if command != "python" else []
         if evidence:
             try:
                 value = json.loads(evidence[-1]).get("passed")
@@ -174,8 +204,18 @@ async def run_process(command, args, cwd, stop=None, timeout_ms=60000, on_output
                     passed_tests = value
             except ValueError:
                 pass
+        if report and report.is_file():
+            try:
+                value = json.loads(report.read_text(encoding="utf-8")).get("passed")
+                if type(value) is int and value >= 0:
+                    passed_tests = value
+            except (ValueError, OSError, AttributeError):
+                pass
     except (OSError, AppError) as exc:
         status, error = "spawn_error", str(exc)
+    finally:
+        if evidence_dir:
+            evidence_dir.cleanup()
     return {"status": status, "exitCode": process.returncode if process else None, "signal": None,
             "error": error, "output": output, "passedTests": passed_tests, "bytes": byte_count,
             "truncated": byte_count > 24000, "durationMs": round((time.monotonic() - started) * 1000), "finishedAt": now()}

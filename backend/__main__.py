@@ -75,7 +75,7 @@ async def serve(args):
         while not server.started and not running.done():
             await asyncio.sleep(0.01)
         if server.started:
-            print(dumps({"type": "ready", "origin": f"http://127.0.0.1:{app.state.port}", "token": token, "backend": "python", "version": "2.1.19"}), flush=True)
+            print(dumps({"type": "ready", "origin": f"http://127.0.0.1:{app.state.port}", "token": token, "backend": "python", "version": "2.1.25"}), flush=True)
         await running
     finally:
         sock.close()
@@ -84,10 +84,10 @@ async def serve(args):
             await asyncio.gather(listener, return_exceptions=True)
 
 
-async def runtime_self_test():
+async def runtime_self_test(python_checks=False):
     skill = SkillCatalog().snapshot()
     assert skill["metadata"]["id"] == "software-development" and skill["content"].startswith("---")
-    assert len(skill["resources"]) == 3
+    assert len(skill["resources"]) == 7
     with tempfile.TemporaryDirectory(prefix="shujin-runtime-") as folder:
         Path(folder, "real.test.mjs").write_text("import {test} from 'node:test';import assert from 'node:assert/strict';test('behavior',()=>assert.equal(2+3,5));", encoding="utf-8")
         Path(folder, "empty.test.mjs").write_text("// empty", encoding="utf-8")
@@ -95,7 +95,22 @@ async def runtime_self_test():
         empty = await run_process("node", ["--test", "empty.test.mjs"], folder)
         if passed["status"] != "passed" or passed["passedTests"] != 1 or empty["passedTests"] != 0:
             raise RuntimeError(dumps({"passed": passed, "empty": empty}))
-        print(dumps({"type": "runtime_self_test", "passed": True, "passedTests": 1, "emptyTests": 0, "skill": skill["metadata"]}), flush=True)
+        python_result = {}
+        if python_checks:
+            source = Path(folder, "calc.py")
+            source.write_text("def add(a,b):\n return a-b\n", encoding="utf-8")
+            Path(folder, "test_calc.py").write_text(
+                "import unittest\nfrom calc import add\nclass T(unittest.TestCase):\n def test_add(self): self.assertEqual(add(2,3),5)\n", encoding="utf-8")
+            failed_python = await run_process("python", ["-m", "unittest", "discover"], folder)
+            source.write_text("def add(a,b):\n return a+b\n", encoding="utf-8")
+            passed_python = await run_process("python", ["-m", "unittest", "discover"], folder)
+            passed_pytest = await run_process("python", ["-m", "pytest", "test_calc.py", "-q"], folder)
+            if (failed_python["exitCode"] != 1 or passed_python["status"] != "passed"
+                    or passed_python["passedTests"] != 1 or passed_pytest["status"] != "passed"
+                    or passed_pytest["passedTests"] != 1):
+                raise RuntimeError(dumps({"failedPython": failed_python, "passedPython": passed_python, "pytest": passed_pytest}))
+            python_result = {"python": {"failedExitCode": 1, "unittestPassed": 1, "pytestPassed": 1}}
+        print(dumps({"type": "runtime_self_test", "passed": True, "passedTests": 1, "emptyTests": 0, "skill": skill["metadata"], **python_result}), flush=True)
 
 
 def main():
@@ -108,11 +123,12 @@ def main():
     parser.add_argument("--data-dir", type=Path, default=Path(os.environ.get("SHUJIN_DATA_DIR", str(root / ".local"))))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "3000")))
     parser.add_argument("--desktop", action="store_true")
-    parser.add_argument("--self-test", action="store_true", help="Verify bundled Node supervision and test reporter")
+    parser.add_argument("--self-test", action="store_true", help="Verify bundled Node supervision and optionally Python checks")
+    parser.add_argument("--self-test-python", action="store_true", help="Also verify project Python/pytest when used with --self-test")
     args = parser.parse_args()
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    asyncio.run(runtime_self_test() if args.self_test else serve(args))
+    asyncio.run(runtime_self_test(args.self_test_python) if args.self_test else serve(args))
 
 
 if __name__ == "__main__":

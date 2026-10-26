@@ -49,6 +49,10 @@ app.whenReady().then(async()=>{
     xhs.setBounds({x:190,y:130,width:420,height:300});
     assert.deepEqual(xhs.view.getBounds(),{x:190,y:130,width:420,height:300});
     const contents=xhs.view.webContents;
+    assert.equal(contents.getZoomFactor(),0.8);
+    for(const factor of [NaN,Infinity,0.49,0.81,'0.7',null])assert.throws(()=>xhs.setZoomFactor(factor),error=>error.status===400);
+    assert.equal(xhs.setZoomFactor(0.6).zoomFactor,0.6);
+    assert.equal(contents.getZoomFactor(),0.6);
     assert.deepEqual(await contents.executeJavaScript('({node:typeof require,bridge:typeof window.shujinDesktop})'),{node:'undefined',bridge:'undefined'});
     for(let i=0;i<40&&heartbeats===0;i++)await new Promise(resolve=>setTimeout(resolve,100));
     assert.ok(network>0);assert.ok(heartbeats>0);
@@ -62,6 +66,9 @@ app.whenReady().then(async()=>{
     await navigated;
     assert.equal(contents.getURL(),'https://www.xiaohongshu.com/notification');
     assert.equal(xhs.view.webContents,contents);
+    assert.equal(contents.getZoomFactor(),0.6,'navigation must preserve the selected page zoom');
+    xhs.setZoomFactor(0.5);assert.equal(contents.getZoomFactor(),0.5);
+    xhs.setZoomFactor(0.8);assert.equal(contents.getZoomFactor(),0.8);
     await contents.executeJavaScript('document.querySelector("#outside").click()');
     await new Promise(resolve=>setTimeout(resolve,200));
     assert.equal(contents.getURL(),'https://www.xiaohongshu.com/notification');

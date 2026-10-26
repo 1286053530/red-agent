@@ -1,8 +1,9 @@
 const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('shujinDesktop', {
-  version:'2.1.19',
+  version:'2.1.25',
   openOfficial:bounds=>ipcRenderer.invoke('xhs:open',bounds),
   resizeOfficial:bounds=>ipcRenderer.invoke('xhs:bounds',bounds),
+  setOfficialZoom:factor=>ipcRenderer.invoke('xhs:zoom',factor),
   hideOfficial:()=>ipcRenderer.invoke('xhs:hide'),
   resumeOfficial:bounds=>ipcRenderer.invoke('xhs:resume',bounds),
   closeOfficial:()=>ipcRenderer.invoke('xhs:close'),

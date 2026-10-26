@@ -77,6 +77,9 @@ body[data-view="developer"] .main-content{padding-bottom:24px}
 .dev-task-options small { display: block; line-height: 1.7; }
 .dev-execution { flex: 0 1 auto; min-height: 0; max-height: 310px; overflow: auto; border-top: 1px solid #e4e9e6; background: #f6f8f7; font-size: 11px; overflow-wrap: anywhere; }
 .dev-execution:empty { display: none; }
+#devTaskAccess { margin: 8px 14px; }
+#devAccessScope { padding: 8px 0; border-top: 1px solid #e4e9e6; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+#devAccessScope summary { cursor: pointer; font-weight: 600; }
 .dev-execution>details, .dev-run-metrics, .dev-verification { margin: 8px 14px; }
 .dev-execution-head { display: flex; gap: 10px; align-items: center; padding: 10px 14px 0; color: #365a49; }
 .dev-execution-head button { margin-left: auto; }
@@ -93,4 +96,5 @@ body[data-view="developer"] .main-content{padding-bottom:24px}
 .dev-command-actions button:last-child { background: #365a49; color: white; }
 .dev-execution>#devResumeTask { margin: 10px 14px; }
 .dev-applied-changes>summary { margin: 8px 14px; color: #5c7768; font-size: 12px; }
+.dev-change-stats{display:flex;justify-content:space-between;gap:8px;color:#8795aa;font-size:10px}.dev-diff-view{max-height:340px;overflow:auto;border:1px solid #e8edf4;border-radius:5px;background:#fbfcfe}.dev-diff-summary{position:sticky;top:0;display:flex;gap:12px;padding:6px 8px;background:#f1f4f9;border-bottom:1px solid #e5eaf1;color:#77869d;font-size:10px}.dev-diff-summary span:first-child{color:#b65e69}.dev-diff-summary span:nth-child(2){color:#43896e}.dev-diff-code{margin:0!important;padding:7px!important;max-height:none!important;white-space:pre!important;font:11px/1.55 Consolas,monospace!important}.dev-diff-code span{display:block;min-height:1.55em}.dev-diff-code .added{background:#e9f7ee;color:#26734f}.dev-diff-code .removed{background:#fff0f0;color:#a94350}.dev-diff-code .meta{color:#7888a1;background:#f3f5f9}.dev-diff-too-large,.dev-diff-error{padding:8px;color:#8c6f51;font-size:11px}
 .dev-skill-bar{display:flex;align-items:center;gap:8px;padding:9px 15px;border-bottom:1px solid #e8ecf3;font-size:11px;color:#65738c}.dev-skill-bar select{flex:1;min-width:0;border:1px solid #dfe5ef;border-radius:5px;padding:6px;background:#fff;color:#40516d}.dev-skill-bar button{background:none;border:0;color:#4669b0;cursor:pointer}.dev-skill-details{padding:9px 15px;border-bottom:1px solid #e8ecf3;font-size:11px;color:#7a879b}.dev-skill-details summary{cursor:pointer}.dev-skill-details p{line-height:1.8;margin:8px 0}.dev-skill-details pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;background:#f6f8fc;padding:10px;line-height:1.7;color:#43516a}.dev-active-skill{font-size:11px;color:#536c9d;line-height:1.8;margin:8px 0}

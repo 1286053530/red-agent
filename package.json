@@ -1,6 +1,6 @@
 {
   "name": "xiaozhu-shujin",
-  "version": "2.1.19",
+  "version": "2.1.25",
   "description": "筱竹书瑾 · Agent 开发工作台",
   "author": "筱竹书瑾",
   "private": true,
@@ -35,8 +35,24 @@
       "!test-results/**"
     ],
     "extraResources": [
-      {"from":"dist/python/shujin-backend","to":"backend","filter":["**/*"]},
-      {"from":".","to":"frontend","filter":["*.html","*.css","app.js","account.js","developer.js"]}
+      {
+        "from": "dist/python/shujin-backend",
+        "to": "backend",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": ".",
+        "to": "frontend",
+        "filter": [
+          "*.html",
+          "*.css",
+          "app.js",
+          "account.js",
+          "developer.js"
+        ]
+      }
     ],
     "win": {
       "target": [

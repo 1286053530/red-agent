@@ -35,7 +35,7 @@ app.whenReady().then(async () => {
     assert.match(await fetch(backend.origin,{headers}).then(r=>r.text()),/筱竹书瑾/);
     assert.deepEqual((await request('/api/dev/state')).projects,[]);
     const skill=await request('/api/dev/skills/software-development');
-    assert.equal(skill.id,'software-development');assert.match(skill.content,/read_skill_resource/);assert.equal(skill.resources.length,3);
+    assert.equal(skill.id,'software-development');assert.match(skill.content,/read_skill_resource/);assert.equal(skill.resources.length,7);
     await mkdir(join(folder,'project'));
     const picked=await request('/api/dev/pick-folder',{});
     const project=await request('/api/dev/projects',picked);
@@ -47,11 +47,12 @@ app.whenReady().then(async () => {
     }
     assert.equal(officialRequests,0);
     await request('/api/xhs/disconnect',{});
-    // Exercise the frozen Python runtime's Node supervision without a real provider.
+    // Exercise bundled Node/Python supervision with a separate project interpreter.
     const executable=packaged?resolve('release/win-unpacked/resources/backend/shujin-backend.exe'):resolve('.venv/Scripts/python.exe');
-    const {stdout}=await promisify(execFile)(executable,[...(packaged?[]:['-m','backend']),'--self-test'],{cwd:resolve('.'),windowsHide:true,
-      env:{...process.env,PYTHONUTF8:'1',SHUJIN_NODE_EXEC:process.execPath,SHUJIN_NODE_IS_ELECTRON:'1'}});
+    const {stdout}=await promisify(execFile)(executable,[...(packaged?[]:['-m','backend']),'--self-test','--self-test-python'],{cwd:resolve('.'),windowsHide:true,
+      env:{...process.env,PYTHONUTF8:'1',SHUJIN_PROJECT_PYTHON:resolve('.venv/Scripts/python.exe'),SHUJIN_NODE_EXEC:process.execPath,SHUJIN_NODE_IS_ELECTRON:'1'}});
     assert.equal(JSON.parse(stdout.trim()).passed,true);
+    assert.deepEqual(JSON.parse(stdout.trim()).python,{failedExitCode:1,unittestPassed:1,pytestPassed:1});
     assert.equal(JSON.parse(stdout.trim()).skill.digest,skill.digest);
     const stopped=await backend.stop();assert.equal(stopped.code,0);
     await xhs.close();
