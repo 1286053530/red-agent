@@ -135,6 +135,7 @@ async def test_image_composer_and_dynamic_height(workspace, live_server):
             page = await browser.new_page(viewport={'width': 1440, 'height': 1000})
             errors = []
             page.on('pageerror', lambda error: errors.append(str(error)))
+            await page.route('https://images.unsplash.com/**', lambda route: route.abort())
             await page.goto(origin)
             await page.locator(f'[data-project-id="{project["id"]}"]').click()
             await page.wait_for_function("document.querySelector('#devModelLabel').textContent==='fixture'")

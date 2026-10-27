@@ -1,7 +1,9 @@
+import asyncio
 import base64
 import json
 import httpx
-from playwright.async_api import async_playwright
+import pytest
+from playwright.async_api import async_playwright, expect
 
 from conftest import ROOT, tool_call
 
@@ -16,6 +18,81 @@ async def paste_png(prompt):
       data.items.add(new File([bytes], 'clipboard.png', {type: 'image/png'}));
       el.dispatchEvent(new ClipboardEvent('paste', {clipboardData: data, bubbles: true, cancelable: true}));
     }""", base64.b64encode(PNG).decode())
+
+
+@pytest.mark.parametrize('transition', ['stop', 'question'])
+async def test_running_task_keeps_editable_draft(workspace, live_server, transition):
+    w, project, _, session = workspace
+    _, origin = live_server
+    release_model = asyncio.Event()
+    requests = []
+
+    async def handler(request):
+        requests.append(json.loads(request.content))
+        await release_model.wait()
+        return httpx.Response(200, json={"choices": [{"message": {"tool_calls": [
+            tool_call('request_user', {'question': '确认下一步？', 'reason': '确认范围', 'summary': '等待补充'})
+        ]}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as model, async_playwright() as playwright:
+        w.model_client = model
+        browser = await playwright.chromium.launch(channel='msedge', headless=True)
+        try:
+            page = await browser.new_page(viewport={'width': 1440, 'height': 1000})
+            await page.route('https://images.unsplash.com/**', lambda route: route.abort())
+            await page.goto(origin)
+            await page.locator(f'[data-project-id="{project["id"]}"]').click()
+            prompt = page.locator('#devPrompt')
+            await prompt.fill('分析项目，先确认任务范围')
+            await page.locator('#devSendButton').click()
+            await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='执行中' && !document.querySelector('#devPrompt').disabled")
+            await expect(prompt).to_be_enabled()
+            task_id = session['task']['id']
+            await prompt.press_sequentially('补充要求：保留已有修改')
+            await prompt.press('Enter')
+            await prompt.press_sequentially('完成后给出验证结果')
+            draft = '补充要求：保留已有修改\n完成后给出验证结果'
+            assert await prompt.input_value() == draft
+            await paste_png(prompt)
+            await page.locator('#devImageDrafts img').wait_for()
+            await page.locator('[data-remove-image]').click()
+            assert await page.locator('#devImageDrafts img').count() == 0
+            await paste_png(prompt)
+            await page.locator('#devImageDrafts img').wait_for()
+            assert await page.locator('#devSendButton').is_disabled()
+            assert await page.locator('#devStopButton').is_visible()
+            # Real polling must not disable or overwrite the draft, focus or selection.
+            await prompt.focus()
+            await prompt.evaluate('el => el.setSelectionRange(2, 6)')
+            for _ in range(2):
+                async with page.expect_response(lambda r: r.url.endswith('/sessions/' + session['id']) and r.request.method == 'GET'):
+                    pass
+            assert await prompt.input_value() == draft
+            assert await prompt.evaluate('el => [document.activeElement === el, el.selectionStart, el.selectionEnd]') == [True, 2, 6]
+            await expect(prompt).to_be_enabled()
+            await page.locator('#devComposer').evaluate('el => el.requestSubmit()')
+            assert session['task']['id'] == task_id and len(requests) == 1
+            assert len([m for m in session['messages'] if m['role'] == 'user']) == 1
+            if transition == 'stop':
+                await page.locator('#devStopButton').click()
+                await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='已停止'")
+            else:
+                release_model.set()
+                await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='等待用户回答'")
+            assert await prompt.input_value() == draft
+            assert await page.locator('#devImageDrafts img').count() == 1
+            assert await page.locator('#devSendButton').is_enabled()
+            release_model.set()
+            await page.locator('#devSendButton').click()
+            await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='等待用户回答' && document.querySelector('#devPrompt').value===''")
+            assert len(requests) == 2
+            user_messages = [m for m in session['messages'] if m['role'] == 'user']
+            assert user_messages[-1]['content'] == draft and user_messages[-1]['images']
+            assert 'data:image/png;base64,' in json.dumps(requests[-1])
+            assert await page.locator('#devImageDrafts img').count() == 0
+        finally:
+            release_model.set()
+            await browser.close()
 
 
 async def test_composer_draft_without_selected_project(workspace, live_server):
@@ -35,11 +112,12 @@ async def test_composer_draft_without_selected_project(workspace, live_server):
         browser = await playwright.chromium.launch(channel='msedge', headless=True)
         try:
             page = await browser.new_page(viewport={'width': 1440, 'height': 1000})
+            await page.route('https://images.unsplash.com/**', lambda route: route.abort())
             await page.add_init_script("localStorage.setItem('devProject','removed-project');localStorage.setItem('devSession','removed-session');")
             await page.goto(origin)
             prompt = page.locator('#devPrompt')
             await page.wait_for_function("document.querySelector('#devModelLabel').textContent==='fixture'")
-            assert await prompt.is_enabled()
+            await expect(prompt).to_be_enabled()
             assert await page.locator('#devAddImage, #devImageInput').count() == 0
             assert await page.locator('#devSessionCount').inner_text() == '选择项目后开始'
             assert await page.locator('[data-session-id]').count() == 1
@@ -58,7 +136,7 @@ async def test_composer_draft_without_selected_project(workspace, live_server):
             assert await prompt.input_value() == '检查项目中的问题'
             assert await page.locator('#devImageDrafts img').count() == 1
             assert await page.locator('#devImageDrafts figcaption').inner_text() == 'clipboard.png'
-            assert await prompt.is_enabled()
+            await expect(prompt).to_be_enabled()
             assert await page.locator('#devSendButton').is_enabled()
             assert len(w.data['sessions']) == 1
             await page.locator('#devSendButton').click()
@@ -66,14 +144,14 @@ async def test_composer_draft_without_selected_project(workspace, live_server):
             assert len(requests) == 1
             assert 'data:image/png;base64,' in json.dumps(requests[0])
             assert len(w.data['sessions']) == 2
-            assert await prompt.is_enabled()
+            await expect(prompt).to_be_enabled()
             assert await prompt.input_value() == ''
             await page.locator('.dev-archived-sessions>summary').click()
             await page.locator(f'[data-session-id="{session["id"]}"]').click()
             assert await prompt.is_disabled()
             await page.locator('#devNewSessionButton').click()
             await page.wait_for_function("!document.querySelector('#devPrompt').disabled")
-            assert await prompt.is_enabled()
+            await expect(prompt).to_be_enabled()
             output = ROOT / '.local/composer-check'
             output.mkdir(parents=True, exist_ok=True)
             await page.screenshot(path=str(output / 'project-draft.png'))
@@ -103,6 +181,7 @@ async def test_composer_access_modes_control_real_task_permissions(workspace, li
         browser = await playwright.chromium.launch(channel="msedge", headless=True)
         try:
             page = await browser.new_page(viewport={"width": 1440, "height": 1000})
+            await page.route('https://images.unsplash.com/**', lambda route: route.abort())
             await page.goto(origin)
             await page.locator(f'[data-project-id="{project["id"]}"]').click()
             await page.wait_for_function("document.querySelector('#devModelLabel').textContent==='fixture'")

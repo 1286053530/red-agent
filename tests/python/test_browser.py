@@ -141,6 +141,8 @@ async def test_desktop_manual_view_controls_do_not_call_collection_apis(live_ser
               openExternal:async()=>{manualCalls.external++;viewChanged({visible:false,error:''});}};""")
             requests = []
             page.on("request", lambda request: requests.append(request.url))
+            # Decorative account images must not make this local UI regression depend on the network.
+            await page.route("https://images.unsplash.com/**", lambda route: route.abort())
             await page.goto(origin + "/#account")
             await page.evaluate("showView('account')")
             await page.locator("#accountView [data-open-xhs]").click()

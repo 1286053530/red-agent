@@ -284,9 +284,9 @@
     $('#devConversationTitle').textContent = state.session?.title || (project ? '新开发会话' : '开发 Agent');
     $('#devConversationTitle').title = $('#devConversationTitle').textContent;
     $('#devNewSessionButton').disabled = !project;
-    $('#devPrompt').disabled = state.busy || sending || !!state.session?.archivedAt;
+    $('#devPrompt').disabled = sending || !!state.session?.archivedAt;
     $('#devAgentStatus').textContent = state.session?.archivedAt ? '已归档 · 可恢复后继续' : statusLabel(state.session?.status || 'idle');
-    $('#devComposerHint').textContent = !project ? '请先导入一个项目' : state.busy ? 'Agent 正在处理任务…' : state.providers.length ? 'Enter 发送 · Shift + Enter 换行' : '请先配置模型';
+    $('#devComposerHint').textContent = !project ? '请先导入一个项目' : state.busy ? '可先编辑草稿，任务结束或停止后发送 · Enter 换行' : state.providers.length ? 'Enter 发送 · Shift + Enter 换行' : '请先配置模型';
     $('#devSessionCount').textContent = project ? `${state.sessions.filter(s => s.projectId === project.id && !s.archivedAt).length} 个会话` : '选择项目后开始';
     $('#devAgentProviderStatus').textContent = state.providers.length ? `${state.providers.length} 个模型配置可用` : '配置模型以开始';
     $('#devNewSessionButton').title = project ? '在当前项目中新建开发会话' : '请先导入本地项目';
@@ -316,10 +316,10 @@
     $('#devSendButton').classList.toggle('hidden', !hasText);
     const awaiting = state.session?.status === 'awaiting_user';
     $('#devSendButton').setAttribute('aria-label', awaiting ? '回答并继续' : '发送');
-    $('#devPrompt').placeholder = awaiting ? '回答当前问题，继续此任务…' : !state.projectId ? '描述你想完成的开发任务，选择项目后发送…' : '描述你想完成的开发任务…';
+    $('#devPrompt').placeholder = state.busy ? '任务执行中，可先编辑后续内容，结束或停止后发送…' : awaiting ? '回答当前问题，继续此任务…' : !state.projectId ? '描述你想完成的开发任务，选择项目后发送…' : '描述你想完成的开发任务…';
     if ($('#devResumeTask') && awaiting) $('#devResumeTask').disabled = !hasText || addingImages || sending || !!state.session?.archivedAt;
     $('#devSendButton').disabled = !hasText || !state.projectId || !$('#devModelSelect').value || state.busy || addingImages || sending || !!state.session?.archivedAt;
-    $('#devSendButton').title = !state.projectId ? (state.projects.length ? '请先选择左侧项目' : '请先导入本地项目') : awaiting ? '回答并继续' : '发送';
+    $('#devSendButton').title = state.busy ? '任务结束或停止后可发送草稿' : !state.projectId ? (state.projects.length ? '请先选择左侧项目' : '请先导入本地项目') : awaiting ? '回答并继续' : '发送';
   }
   function resizePrompt() {
     const prompt = $('#devPrompt');
@@ -350,7 +350,7 @@
     }).join('') + '</div>';
   }
   async function addImages(files) {
-    if (!files.length || addingImages || sending || state.busy || state.session?.archivedAt) return;
+    if (!files.length || addingImages || sending || state.session?.archivedAt) return;
     const generation = draftGeneration;
     addingImages = true; updateSendButton();
     try {
@@ -380,7 +380,7 @@
   }
   $('#devImageDrafts').addEventListener('click', event => {
     const button = event.target.closest('[data-remove-image]');
-    if (!button || sending || state.busy || addingImages) return;
+    if (!button || sending || addingImages || state.session?.archivedAt) return;
     draftImages.splice(Number(button.dataset.removeImage), 1); renderImageDrafts();
   });
   $('#devPrompt').addEventListener('paste', event => {
@@ -841,7 +841,7 @@
   });
   promptObserver.observe($('#devPrompt'));
   window.addEventListener('resize', resizePrompt);
-  $('#devPrompt').addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); $('#devComposer').requestSubmit(); } });
+  $('#devPrompt').addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && !state.busy) { event.preventDefault(); $('#devComposer').requestSubmit(); } });
   $('#devSettingsModal').addEventListener('click', event => { if (event.target.id === 'devSettingsModal') closeSettings(); });
   $('#devProviderForm').addEventListener('submit', async event => {
     event.preventDefault(); const button = $('#devProviderSave'); button.disabled = true; button.textContent = '保存中…';

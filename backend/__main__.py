@@ -75,7 +75,7 @@ async def serve(args):
         while not server.started and not running.done():
             await asyncio.sleep(0.01)
         if server.started:
-            print(dumps({"type": "ready", "origin": f"http://127.0.0.1:{app.state.port}", "token": token, "backend": "python", "version": "2.1.28"}), flush=True)
+            print(dumps({"type": "ready", "origin": f"http://127.0.0.1:{app.state.port}", "token": token, "backend": "python", "version": "2.1.29"}), flush=True)
         await running
     finally:
         sock.close()
