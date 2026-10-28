@@ -1,0 +1,40 @@
+# 上游路径与本地参考页
+按用途选择；同一文档分片依次读取，拼接后为原文。原文中的相对路径请在此索引查找，不要猜测本地路径。
+
+- `.claude/skills/ui-ux-pro-max/SKILL.md` → `references/000-skill-01.md`, `references/000-skill-02.md`
+- `.claude/skills/ui-ux-pro-max/references/pro-rules.md` → `references/001-pro-rules-01.md`, `references/001-pro-rules-02.md`
+- `.claude/skills/ui-ux-pro-max/references/quick-reference.md` → `references/002-quick-reference-01.md`, `references/002-quick-reference-02.md`, `references/002-quick-reference-03.md`
+- `.claude/skills/ui-ux-pro-max/data/app-interface.csv` → `references/003-app-interface-01.md`, `references/003-app-interface-02.md`
+- `.claude/skills/ui-ux-pro-max/data/charts.csv` → `references/004-charts-01.md`, `references/004-charts-02.md`, `references/004-charts-03.md`
+- `.claude/skills/ui-ux-pro-max/data/colors.csv` → `references/005-colors-01.md`, `references/005-colors-02.md`, `references/005-colors-03.md`, `references/005-colors-04.md`, `references/005-colors-05.md`
+- `.claude/skills/ui-ux-pro-max/data/icons.csv` → `references/006-icons-01.md`, `references/006-icons-02.md`, `references/006-icons-03.md`, `references/006-icons-04.md`, `references/006-icons-05.md`, `references/006-icons-06.md`, `references/006-icons-07.md`
+- `.claude/skills/ui-ux-pro-max/data/landing.csv` → `references/007-landing-01.md`, `references/007-landing-02.md`, `references/007-landing-03.md`
+- `.claude/skills/ui-ux-pro-max/data/motion.csv` → `references/008-motion-01.md`, `references/008-motion-02.md`
+- `.claude/skills/ui-ux-pro-max/data/products.csv` → `references/009-products-01.md`, `references/009-products-02.md`, `references/009-products-03.md`, `references/009-products-04.md`, `references/009-products-05.md`, `references/009-products-06.md`, `references/009-products-07.md`, `references/009-products-08.md`, `references/009-products-09.md`
+- `.claude/skills/ui-ux-pro-max/data/react-performance.csv` → `references/010-react-performance-01.md`, `references/010-react-performance-02.md`
+- `.claude/skills/ui-ux-pro-max/data/styles.csv` → `references/011-styles-01.md`, `references/011-styles-02.md`, `references/011-styles-03.md`, `references/011-styles-04.md`, `references/011-styles-05.md`, `references/011-styles-06.md`, `references/011-styles-07.md`, `references/011-styles-08.md`, `references/011-styles-09.md`, `references/011-styles-10.md`, `references/011-styles-11.md`, `references/011-styles-12.md`, `references/011-styles-13.md`, `references/011-styles-14.md`, `references/011-styles-15.md`, `references/011-styles-16.md`, `references/011-styles-17.md`, `references/011-styles-18.md`
+- `.claude/skills/ui-ux-pro-max/data/typography.csv` → `references/012-typography-01.md`, `references/012-typography-02.md`, `references/012-typography-03.md`, `references/012-typography-04.md`, `references/012-typography-05.md`, `references/012-typography-06.md`
+- `.claude/skills/ui-ux-pro-max/data/ui-reasoning.csv` → `references/013-ui-reasoning-01.md`, `references/013-ui-reasoning-02.md`, `references/013-ui-reasoning-03.md`, `references/013-ui-reasoning-04.md`, `references/013-ui-reasoning-05.md`, `references/013-ui-reasoning-06.md`, `references/013-ui-reasoning-07.md`, `references/013-ui-reasoning-08.md`, `references/013-ui-reasoning-09.md`
+- `.claude/skills/ui-ux-pro-max/data/ux-guidelines.csv` → `references/014-ux-guidelines-01.md`, `references/014-ux-guidelines-02.md`, `references/014-ux-guidelines-03.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/angular.csv` → `references/015-angular-01.md`, `references/015-angular-02.md`, `references/015-angular-03.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/astro.csv` → `references/016-astro-01.md`, `references/016-astro-02.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/avalonia.csv` → `references/017-avalonia-01.md`, `references/017-avalonia-02.md`, `references/017-avalonia-03.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/flutter.csv` → `references/018-flutter-01.md`, `references/018-flutter-02.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/html-tailwind.csv` → `references/019-html-tailwind-01.md`, `references/019-html-tailwind-02.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/javafx.csv` → `references/020-javafx-01.md`, `references/020-javafx-02.md`, `references/020-javafx-03.md`, `references/020-javafx-04.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/jetpack-compose.csv` → `references/021-jetpack-compose-01.md`, `references/021-jetpack-compose-02.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/laravel.csv` → `references/022-laravel-01.md`, `references/022-laravel-02.md`, `references/022-laravel-03.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/nextjs.csv` → `references/023-nextjs-01.md`, `references/023-nextjs-02.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/nuxt-ui.csv` → `references/024-nuxt-ui-01.md`, `references/024-nuxt-ui-02.md`, `references/024-nuxt-ui-03.md`, `references/024-nuxt-ui-04.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/nuxtjs.csv` → `references/025-nuxtjs-01.md`, `references/025-nuxtjs-02.md`, `references/025-nuxtjs-03.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/react-native.csv` → `references/026-react-native-01.md`, `references/026-react-native-02.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/react.csv` → `references/027-react-01.md`, `references/027-react-02.md`, `references/027-react-03.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/shadcn.csv` → `references/028-shadcn-01.md`, `references/028-shadcn-02.md`, `references/028-shadcn-03.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/svelte.csv` → `references/029-svelte-01.md`, `references/029-svelte-02.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/swiftui.csv` → `references/030-swiftui-01.md`, `references/030-swiftui-02.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/threejs.csv` → `references/031-threejs-01.md`, `references/031-threejs-02.md`, `references/031-threejs-03.md`, `references/031-threejs-04.md`, `references/031-threejs-05.md`, `references/031-threejs-06.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/uno.csv` → `references/032-uno-01.md`, `references/032-uno-02.md`, `references/032-uno-03.md`, `references/032-uno-04.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/uwp.csv` → `references/033-uwp-01.md`, `references/033-uwp-02.md`, `references/033-uwp-03.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/vue.csv` → `references/034-vue-01.md`, `references/034-vue-02.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/winui.csv` → `references/035-winui-01.md`, `references/035-winui-02.md`, `references/035-winui-03.md`
+- `.claude/skills/ui-ux-pro-max/data/stacks/wpf.csv` → `references/036-wpf-01.md`, `references/036-wpf-02.md`, `references/036-wpf-03.md`

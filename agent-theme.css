@@ -248,9 +248,23 @@ body[data-view="developer"] #devComposerHint{position:absolute;width:1px;height:
 .dev-picker-popover>strong{display:block;font-size:12px;color:#344054;margin:0 0 10px}
 .dev-picker-popover>p{font-size:11px;color:#7a8699;line-height:1.7;margin:10px 0 0}
 body[data-view="developer"] .dev-picker-popover .dev-model-row{display:flex;flex-direction:column;align-items:stretch;border:0;padding:0;gap:10px;font-size:12px}
+body[data-view="developer"] .dev-picker-popover .dev-skill-bar{display:flex;flex-wrap:wrap;padding:12px 0 4px;margin-top:8px;border-top:1px solid var(--agent-line);gap:8px}
+body[data-view="developer"] .dev-picker-popover .dev-skill-bar label{width:100%;font-weight:600;color:#344054}
+body[data-view="developer"] .dev-picker-popover .dev-skill-bar select:disabled{background:#eaecf0;border-color:#cbd1da;color:#667085;opacity:1;cursor:not-allowed}
+.dev-skill-status{display:flex;align-items:flex-start;gap:6px;width:100%;color:#7a8699;font-size:11px;line-height:1.6}
+.dev-skill-status svg{display:none;flex:0 0 14px;width:14px;height:14px;margin-top:2px;fill:none;stroke:currentColor;stroke-width:1.8}
+.dev-skill-bar.is-locked .dev-skill-status{padding:7px 9px;border:1px solid #d0d5dd;border-radius:6px;background:#f2f4f7;color:#475467;font-weight:600}
+.dev-skill-bar.is-locked .dev-skill-status svg{display:block}
+body[data-view="developer"] .dev-picker-popover .dev-skill-details{display:block;padding:6px 0;border:0}
+body[data-view="developer"] .dev-picker-popover .dev-skill-details[open]{max-height:none;overflow:visible}
+body[data-view="developer"] .dev-picker-popover .dev-skill-details pre{max-height:220px;font-size:11px}
 .dev-picker-popover .dev-model-row>label{display:none}
 body[data-view="developer"] .dev-picker-popover .dev-model-row select{width:100%;flex:none;min-height:34px;font-size:12px}
 .dev-picker-popover #devManageModel{text-align:left;color:#315deb;min-height:30px}
+.dev-reasoning-control{display:flex;flex-direction:column;gap:8px;padding-top:4px}
+.dev-reasoning-control>label{font-size:12px;color:#344054;font-weight:600}
+.dev-reasoning-control>small{font-size:11px;line-height:1.6;color:#7a8699}
+.dev-reasoning-control select:disabled{opacity:.65;cursor:not-allowed}
 body[data-view="developer"] .dev-picker-popover .dev-task-options{padding:8px 0 0;margin-top:10px;max-height:none;overflow:visible}
 .dev-access-modes{display:flex;flex-direction:column;gap:4px}
 .dev-access-modes>label{display:flex;gap:9px;align-items:flex-start;padding:8px 6px;cursor:pointer;border-radius:6px;color:#344054;font-size:12px}

@@ -23,4 +23,4 @@ BASE.md 已提供计划、分页读取、审批、验证、交付和恢复规范
 - [JavaScript/Node](references/javascript-node.md)：涉及 JavaScript、TypeScript 或 Node 实现与检查时读取。
 - [Python](references/python.md)：涉及 Python 实现与检查时读取，包含解释器和执行边界。
 
-只读任务只能交付静态证据；修改任务仍须真实行为验证和 review_diff 后才能 finish_task。工具不支持的检查如实说明，不通过脚本绕过限制。
+只读任务只能交付静态证据；源码修改仍须真实行为验证和 review_diff 后才能 finish_task。仅远程操作且未修改本地源码时，须在目标主机执行并核实最终 SSH 命令结果；工具不支持的检查如实说明，不通过脚本绕过限制。

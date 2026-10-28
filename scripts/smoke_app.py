@@ -64,6 +64,7 @@ async def main():
                 assert page is not None, "Workbench page did not load"
                 await page.wait_for_selector("#devImportButton", state="attached")
                 assert await page.evaluate("document.body.dataset.view") == "developer"
+                assert await page.locator(".sidebar-lower, .sidebar .profile").count() == 0
                 assert not await page.locator(".topbar").is_visible()
                 assert await page.locator(".dev-agent-heading #devToggleSidebar").is_visible()
                 assert await page.locator("#devComposer #devModelPicker").is_visible()
@@ -155,9 +156,21 @@ async def main():
                     assert (await client.get(origin + "/api/dev/state")).status_code == 403
                 await page.evaluate("showView('developer')")
                 await page.locator("#devImportButton").wait_for(state="visible")
-                await page.wait_for_function("document.querySelector('#devSkillSelect').value==='software-development'")
+                await page.wait_for_function("document.querySelector('#devSkillSelect').value==='auto'")
                 assert not await page.locator("#devSkillSelect").is_visible()
                 assert not await page.locator("#devSkillDetails").is_visible()
+                await page.locator('#devModelPicker > summary').click()
+                assert await page.locator('#devSkillSelect').is_visible()
+                assert await page.locator('#devSkillSelect').is_enabled()
+                assert await page.locator('#devSkillStatus').inner_text() == '仅对新任务生效'
+                assert await page.locator('#devSkillSelect option').count() == 13
+                await page.locator('#devViewSkill').click()
+                assert 'book-to-skill' in await page.locator('#devSkillContent').inner_text()
+                await page.locator('#devSkillSelect').select_option('humanizer')
+                await page.locator('#devViewSkill').click()
+                await page.wait_for_function("document.querySelector('#devSkillContent').textContent.includes('Humanizer 自然表达')")
+                await page.locator('#devSkillSelect').select_option('auto')
+                await page.locator('#devModelPicker > summary').click()
                 skill_content = await page.evaluate("fetch('/api/dev/skills/software-development').then(r=>r.json()).then(s=>s.content)")
                 assert skill_content.startswith("---") and "read_skill_resource" in skill_content
                 fixture = folder / "large-project"
@@ -170,16 +183,32 @@ async def main():
                 assert [entry["path"] for entry in listing["entries"]] == ["src"]
                 chunk = await page.evaluate("args=>fetch('/api/dev/projects/'+args.id+'/file?path=src%2Flarge.txt&offset='+args.offset).then(r=>r.json())", {"id": project["id"], "offset": len(text) - 4})
                 assert chunk["content"] == "TAIL" and not chunk["hasMore"] and chunk["total_chars"] == len(text)
+                provider = await page.evaluate("""() => fetch('/api/dev/providers', {method:'POST',
+                    headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:'Smoke Claude',
+                    protocol:'anthropic', model:'claude-opus-4-6', baseUrl:'https://example.com/v1', apiKey:'fixture'})})
+                    .then(r=>r.json())""")
+                await page.reload()
+                await page.locator(f'[data-project-id="{project["id"]}"]').click()
+                await page.locator('#devModelPicker > summary').click()
+                await page.locator('#devModelSelect').select_option(provider['id'])
+                await page.locator('#devModelPicker > summary').click()
+                await page.locator('#devReasoningSelect').select_option('max')
+                await page.wait_for_function("document.querySelector('#devReasoningHint').textContent.includes('自动保存')")
+                await page.reload()
+                await page.locator('#devModelPicker > summary').click()
+                assert await page.locator('#devReasoningSelect').input_value() == 'max'
+                assert await page.locator('#devReasoningSelect').is_enabled()
                 await page.evaluate("window.close()")
                 code = await asyncio.to_thread(process.wait, 15)
                 assert code == 0, code
                 report = {"passed": True, "mode": mode, "bridge": bridge,
                           "pythonApi": state["status"], "anonymousApi": 403, "shutdownCode": code,
-                          "manualOnly": True, "officialRequests": len(official_requests), "automaticApiRequests": len(automation_requests), "builtinSkill": "software-development", "largeSourcePaging": True,
+                          "manualOnly": True, "officialRequests": len(official_requests), "automaticApiRequests": len(automation_requests), "builtinSkill": "auto", "builtinSkillCount": 11, "skillMenuAndDetail": True, "largeSourcePaging": True,
                           "manualToolbarLayout": toolbar_layout, "conversationClickCollapsesBrowserPanel": True,
                           "inputClickKeepsBrowserPanel": True, "draftWithoutProject": True,
                           "clipboardImageDraftWithoutProject": True, "imagePickerRemoved": True,
-                          "manualToolbarChromeRemoved": True}
+                          "manualToolbarChromeRemoved": True, "anthropicReasoningSelectionPersisted": True,
+                          "sidebarProfileRemoved": True}
                 (output / f"app-{mode}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
                 print(json.dumps(report))
             finally:

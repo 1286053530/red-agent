@@ -102,7 +102,8 @@ async def test_responses_images_tools_restart_and_compaction(workspace, live_ser
         assert 'data:image' not in (w.data_dir / 'workspace.json').read_text(encoding='utf-8')
         assert 'data:image' not in json.dumps(w.public_session(session))
         task_id = session['task']['id']
-        loaded = Workspace(w.data_dir, model_client=model)
+        loaded = Workspace(w.data_dir, model_client=model,
+                           intent_classifier=lambda _: {"type": "development"})
         restored = loaded.session(session['id'])
         steps.append(('finish_task', {'summary': '已分析', 'evidence': 'app.mjs:1 为减法；已结合两张截图进行静态审查'}))
         await loaded.resume_run(session['id'], {'feedback': '', 'images': [IMAGE]})

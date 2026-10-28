@@ -1,0 +1,1 @@
+192,Ticketing / Box Office,#0F172A,#FFFFFF,#1E293B,#FFFFFF,#16A34A,#0F172A,#020617,#F8FAFC,#0E1223,#F8FAFC,#1A1E2F,#94A3B8,#334155,#DC2626,#FFFFFF,#FFFFFF,Event theme colors + available green + sold-out red

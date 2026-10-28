@@ -48,8 +48,17 @@ async def test_running_task_keeps_editable_draft(workspace, live_server, transit
             await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='执行中' && !document.querySelector('#devPrompt').disabled")
             await expect(prompt).to_be_enabled()
             task_id = session['task']['id']
+            await page.locator('#devModelPicker > summary').click()
+            await expect(page.locator('#devSkillSelect')).to_be_disabled()
+            await expect(page.locator('#devSkillStatus')).to_contain_text('执行中，暂不可切换')
+            await expect(page.locator('#devSkillStatus svg')).to_be_visible()
+            assert await page.locator('#devSkillSelect').evaluate("el=>getComputedStyle(el).cursor") == 'not-allowed'
+            folder = ROOT / '.local/skill-check'
+            folder.mkdir(parents=True, exist_ok=True)
+            await page.screenshot(path=str(folder / 'skill-disabled-running.png'))
+            await page.locator('#devModelPicker > summary').click()
             await prompt.press_sequentially('补充要求：保留已有修改')
-            await prompt.press('Enter')
+            await prompt.press('Shift+Enter')
             await prompt.press_sequentially('完成后给出验证结果')
             draft = '补充要求：保留已有修改\n完成后给出验证结果'
             assert await prompt.input_value() == draft
@@ -59,7 +68,7 @@ async def test_running_task_keeps_editable_draft(workspace, live_server, transit
             assert await page.locator('#devImageDrafts img').count() == 0
             await paste_png(prompt)
             await page.locator('#devImageDrafts img').wait_for()
-            assert await page.locator('#devSendButton').is_disabled()
+            assert await page.locator('#devSendButton').is_enabled()
             assert await page.locator('#devStopButton').is_visible()
             # Real polling must not disable or overwrite the draft, focus or selection.
             await prompt.focus()
@@ -70,7 +79,6 @@ async def test_running_task_keeps_editable_draft(workspace, live_server, transit
             assert await prompt.input_value() == draft
             assert await prompt.evaluate('el => [document.activeElement === el, el.selectionStart, el.selectionEnd]') == [True, 2, 6]
             await expect(prompt).to_be_enabled()
-            await page.locator('#devComposer').evaluate('el => el.requestSubmit()')
             assert session['task']['id'] == task_id and len(requests) == 1
             assert len([m for m in session['messages'] if m['role'] == 'user']) == 1
             if transition == 'stop':
@@ -81,6 +89,14 @@ async def test_running_task_keeps_editable_draft(workspace, live_server, transit
                 await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='等待用户回答'")
             assert await prompt.input_value() == draft
             assert await page.locator('#devImageDrafts img').count() == 1
+            await page.locator('#devModelPicker > summary').click()
+            await expect(page.locator('#devSkillSelect')).to_be_enabled()
+            await expect(page.locator('#devSkillStatus')).to_have_text('仅对新任务生效')
+            await expect(page.locator('#devSkillStatus svg')).not_to_be_visible()
+            await page.locator('#devSkillSelect').select_option('humanizer')
+            assert session['task']['skill']['id'] == 'software-development'
+            await page.locator('#devSkillSelect').select_option('auto')
+            await page.locator('#devModelPicker > summary').click()
             assert await page.locator('#devSendButton').is_enabled()
             release_model.set()
             await page.locator('#devSendButton').click()
@@ -148,7 +164,7 @@ async def test_composer_draft_without_selected_project(workspace, live_server):
             assert await prompt.input_value() == ''
             await page.locator('.dev-archived-sessions>summary').click()
             await page.locator(f'[data-session-id="{session["id"]}"]').click()
-            assert await prompt.is_disabled()
+            await expect(prompt).to_be_disabled()
             await page.locator('#devNewSessionButton').click()
             await page.wait_for_function("!document.querySelector('#devPrompt').disabled")
             await expect(prompt).to_be_enabled()

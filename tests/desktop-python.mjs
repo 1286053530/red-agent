@@ -36,10 +36,24 @@ app.whenReady().then(async () => {
     assert.deepEqual((await request('/api/dev/state')).projects,[]);
     const skill=await request('/api/dev/skills/software-development');
     assert.equal(skill.id,'software-development');assert.match(skill.content,/read_skill_resource/);assert.equal(skill.resources.length,7);
+    const skills=(await request('/api/dev/skills')).skills;
+    assert.equal(skills.length,11);
+    for(const entry of skills){
+      const detail=await request('/api/dev/skills/'+entry.id);
+      assert.match(detail.content,/read_skill_resource/);
+      assert.ok(detail.resources.length>0);
+    }
     await mkdir(join(folder,'project'));
     const picked=await request('/api/dev/pick-folder',{});
     const project=await request('/api/dev/projects',picked);
     assert.equal(project.path,picked.path);
+    const remote=await request('/api/dev/projects/'+project.id+'/remote',{host:'192.0.2.10',port:22,username:'root',hostKey:'SHA256:'+'A'.repeat(43),password:'fixture-password'});
+    assert.equal(remote.host,'192.0.2.10');
+    assert.equal(remote.password,undefined);
+    const remoteState=await request('/api/dev/state');
+    assert.equal(remoteState.remotes.length,1);
+    assert.equal(remoteState.remotes[0].projectId,project.id);
+    assert.ok(!JSON.stringify(remoteState).includes('fixture-password'));
     assert.equal((await request('/api/xhs/status')).status,'automation_disabled');
     for(const path of ['/api/xhs/connect','/api/xhs/login/refresh','/api/xhs/recommendations?more=1','/api/xhs/messages?kind=private&open=1']){
       const response=await fetch(backend.origin+path,{headers,method:'POST'});

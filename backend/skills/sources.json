@@ -1,0 +1,1669 @@
+[
+  {
+    "id": "karpathy-guidelines",
+    "repository": "https://github.com/forrestchang/andrej-karpathy-skills",
+    "commit": "2c606141936f1eeef17fa3043a72095b4765b9c2",
+    "archiveSha256": "384f310b37e89242dc00c4b58e1d84abf6454eeb3d24c0f9412c56e251573cd7",
+    "license": "MIT",
+    "primary": "skills/karpathy-guidelines/SKILL.md",
+    "resources": [
+      {
+        "upstreamPath": "skills/karpathy-guidelines/SKILL.md",
+        "sha256": "6e22cc54cb02a5e98ae42d06d9d7292db0c1b43894831b32879beb0166b2aea7",
+        "pages": [
+          "references/000-skill-01.md"
+        ]
+      }
+    ],
+    "adaptation": "Chinese entrypoint; upstream text split without rewriting; no upstream runtimes installed."
+  },
+  {
+    "id": "ponytail",
+    "repository": "https://github.com/DietrichGebert/ponytail",
+    "commit": "09c434ab73ca43761c5d8b0c5d341926c2fba710",
+    "archiveSha256": "f3b63282fee81a66d2cb3a9f51c9eed9da6e35db814db749ae6df8fd4f30366b",
+    "license": "MIT",
+    "primary": "skills/ponytail/SKILL.md",
+    "resources": [
+      {
+        "upstreamPath": "skills/ponytail/SKILL.md",
+        "sha256": "9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509",
+        "pages": [
+          "references/000-skill-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/ponytail-audit/SKILL.md",
+        "sha256": "2b3223a02c386d1263e1b08343cb8eb3a53e444cdafb1d79e26c8ec2a8fcad28",
+        "pages": [
+          "references/001-skill-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/ponytail-debt/SKILL.md",
+        "sha256": "b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f",
+        "pages": [
+          "references/002-skill-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/ponytail-gain/SKILL.md",
+        "sha256": "231034a896d6762e4b5c8468287083422c56b499119976ec9f76821f7d083090",
+        "pages": [
+          "references/003-skill-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/ponytail-help/SKILL.md",
+        "sha256": "86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9",
+        "pages": [
+          "references/004-skill-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/ponytail-review/SKILL.md",
+        "sha256": "33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e",
+        "pages": [
+          "references/005-skill-01.md"
+        ]
+      }
+    ],
+    "adaptation": "Chinese entrypoint; upstream text split without rewriting; no upstream runtimes installed."
+  },
+  {
+    "id": "ui-ux-pro-max",
+    "repository": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+    "commit": "28b3b8dee8c976df4fa3e94aed4e092ad43fcb03",
+    "archiveSha256": "45ea8b8b8ebbdf01bb1fb12b31307dcc767aa16310ef750cd9f09443f58f2b9c",
+    "license": "MIT",
+    "primary": ".claude/skills/ui-ux-pro-max/SKILL.md",
+    "resources": [
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+        "sha256": "ea087c341bfb5b23195c7302027268ede86da802554c18a5c4896a6017b439f9",
+        "pages": [
+          "references/000-skill-01.md",
+          "references/000-skill-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/references/pro-rules.md",
+        "sha256": "d28442d61c310b49c054a4ea736f89fb3008beebdbbc38c4b3a540b8f7fadf23",
+        "pages": [
+          "references/001-pro-rules-01.md",
+          "references/001-pro-rules-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/references/quick-reference.md",
+        "sha256": "0609bc7c89dacb40472465d8fc14257b56b2c43439660fc8d6fa3b8c022e1876",
+        "pages": [
+          "references/002-quick-reference-01.md",
+          "references/002-quick-reference-02.md",
+          "references/002-quick-reference-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/app-interface.csv",
+        "sha256": "331e7cf2c0b222d80c566c5f255c63cb339f65bfd02e471a720f28e4864a9f08",
+        "pages": [
+          "references/003-app-interface-01.md",
+          "references/003-app-interface-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/charts.csv",
+        "sha256": "4115cf1120680f2cedef0676cb648f30c7ef4699e2a947535d4113e71ed3b12a",
+        "pages": [
+          "references/004-charts-01.md",
+          "references/004-charts-02.md",
+          "references/004-charts-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/colors.csv",
+        "sha256": "8162429222bce22df62b564085946a30d07cc9722c58d0a3a494bd0d1d00841c",
+        "pages": [
+          "references/005-colors-01.md",
+          "references/005-colors-02.md",
+          "references/005-colors-03.md",
+          "references/005-colors-04.md",
+          "references/005-colors-05.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/icons.csv",
+        "sha256": "50816c6012030178195a16ee481ebf58b47bd985d70e8ec58886cc83f6eddafc",
+        "pages": [
+          "references/006-icons-01.md",
+          "references/006-icons-02.md",
+          "references/006-icons-03.md",
+          "references/006-icons-04.md",
+          "references/006-icons-05.md",
+          "references/006-icons-06.md",
+          "references/006-icons-07.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/landing.csv",
+        "sha256": "9a2edd3bb676c2a58f00ade7a062e285222d4297bfd847c8d5b056f0dbbf52d0",
+        "pages": [
+          "references/007-landing-01.md",
+          "references/007-landing-02.md",
+          "references/007-landing-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/motion.csv",
+        "sha256": "381affe8df8ea1f66fbbda2598827f9f54299107bbe6a1b4e9b68f6b62091ceb",
+        "pages": [
+          "references/008-motion-01.md",
+          "references/008-motion-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/products.csv",
+        "sha256": "42473f75e8dde5987bdf89ce55d8c168091b80a356cae691dd60247d80720b70",
+        "pages": [
+          "references/009-products-01.md",
+          "references/009-products-02.md",
+          "references/009-products-03.md",
+          "references/009-products-04.md",
+          "references/009-products-05.md",
+          "references/009-products-06.md",
+          "references/009-products-07.md",
+          "references/009-products-08.md",
+          "references/009-products-09.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/react-performance.csv",
+        "sha256": "3d925802539abac5afeb63ae8aa1960b7229ad271b3a47caed40ab2d97ad0734",
+        "pages": [
+          "references/010-react-performance-01.md",
+          "references/010-react-performance-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/styles.csv",
+        "sha256": "a93a4d9d7025856575d7b7583bda020be9043013432c5af7c58af9dbdfb206b7",
+        "pages": [
+          "references/011-styles-01.md",
+          "references/011-styles-02.md",
+          "references/011-styles-03.md",
+          "references/011-styles-04.md",
+          "references/011-styles-05.md",
+          "references/011-styles-06.md",
+          "references/011-styles-07.md",
+          "references/011-styles-08.md",
+          "references/011-styles-09.md",
+          "references/011-styles-10.md",
+          "references/011-styles-11.md",
+          "references/011-styles-12.md",
+          "references/011-styles-13.md",
+          "references/011-styles-14.md",
+          "references/011-styles-15.md",
+          "references/011-styles-16.md",
+          "references/011-styles-17.md",
+          "references/011-styles-18.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/typography.csv",
+        "sha256": "321fc446e89024488ebae96dda93efc4d2307bd8bddb240857ad51364f6782c8",
+        "pages": [
+          "references/012-typography-01.md",
+          "references/012-typography-02.md",
+          "references/012-typography-03.md",
+          "references/012-typography-04.md",
+          "references/012-typography-05.md",
+          "references/012-typography-06.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/ui-reasoning.csv",
+        "sha256": "f0774dd741cecdad5eec842034bd6d5e9ea50e9f220a1910069748daa0bb8e9a",
+        "pages": [
+          "references/013-ui-reasoning-01.md",
+          "references/013-ui-reasoning-02.md",
+          "references/013-ui-reasoning-03.md",
+          "references/013-ui-reasoning-04.md",
+          "references/013-ui-reasoning-05.md",
+          "references/013-ui-reasoning-06.md",
+          "references/013-ui-reasoning-07.md",
+          "references/013-ui-reasoning-08.md",
+          "references/013-ui-reasoning-09.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/ux-guidelines.csv",
+        "sha256": "ff81ec613f70ba9fc3fcce52dbe4ae35d44b2079dbe6dc066d2d6e38c28facd5",
+        "pages": [
+          "references/014-ux-guidelines-01.md",
+          "references/014-ux-guidelines-02.md",
+          "references/014-ux-guidelines-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/angular.csv",
+        "sha256": "704be83f2bad30c7e6de01afb113ffa01e0c458762f48b7102f31ba2367b5553",
+        "pages": [
+          "references/015-angular-01.md",
+          "references/015-angular-02.md",
+          "references/015-angular-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/astro.csv",
+        "sha256": "2c2f55fadaafc05e04cc321c8194a1a28b656e6757fe2ba316f41b16428299c6",
+        "pages": [
+          "references/016-astro-01.md",
+          "references/016-astro-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/avalonia.csv",
+        "sha256": "442fca14675a020683473e7e49f08abb27b9df0765c80efe54aef61f1a4ac258",
+        "pages": [
+          "references/017-avalonia-01.md",
+          "references/017-avalonia-02.md",
+          "references/017-avalonia-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/flutter.csv",
+        "sha256": "64dba0ac17349f28bce517a0f5f48c54d9ed2e487ec0c0258303463b382f41a0",
+        "pages": [
+          "references/018-flutter-01.md",
+          "references/018-flutter-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/html-tailwind.csv",
+        "sha256": "d05a581d20af57b8ca0104a6d31d90a07c437d500662a96c3029fc2f9a4678ee",
+        "pages": [
+          "references/019-html-tailwind-01.md",
+          "references/019-html-tailwind-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/javafx.csv",
+        "sha256": "2e819b8d5abdd23ad4dae0991650fdb57af497aabd68b37463aa9c442944c869",
+        "pages": [
+          "references/020-javafx-01.md",
+          "references/020-javafx-02.md",
+          "references/020-javafx-03.md",
+          "references/020-javafx-04.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/jetpack-compose.csv",
+        "sha256": "699de218b286948eaec7d15767b6e1350ee299167e49bf476d82e3ff58724e0a",
+        "pages": [
+          "references/021-jetpack-compose-01.md",
+          "references/021-jetpack-compose-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/laravel.csv",
+        "sha256": "854ea4daa5fc61292d22235ad33b49ba3fe22423c3de8d3cb03758ffed3b59f9",
+        "pages": [
+          "references/022-laravel-01.md",
+          "references/022-laravel-02.md",
+          "references/022-laravel-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/nextjs.csv",
+        "sha256": "ecd2c27b2ea0127d203ae726060efcdd7335b5e83f96b99e4f3befbbfeebd5a4",
+        "pages": [
+          "references/023-nextjs-01.md",
+          "references/023-nextjs-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/nuxt-ui.csv",
+        "sha256": "fce682a338cfcdbf35d318d20e5befbe7b5d81b05abc37f87677a6d9cde84dc6",
+        "pages": [
+          "references/024-nuxt-ui-01.md",
+          "references/024-nuxt-ui-02.md",
+          "references/024-nuxt-ui-03.md",
+          "references/024-nuxt-ui-04.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/nuxtjs.csv",
+        "sha256": "3d9b54ed2d151bd9c86e9e5609b8a6f88a00c4c52fa601a30af96c49b2c4d176",
+        "pages": [
+          "references/025-nuxtjs-01.md",
+          "references/025-nuxtjs-02.md",
+          "references/025-nuxtjs-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/react-native.csv",
+        "sha256": "ba31dd9c0c04da6bc02a74448bf121f9c0728ae5ba3b4d47b487778b0a1135b5",
+        "pages": [
+          "references/026-react-native-01.md",
+          "references/026-react-native-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/react.csv",
+        "sha256": "4dd176a9787e5c6306b5df94158d75955adcdc6edab41ce5286641a5842303c1",
+        "pages": [
+          "references/027-react-01.md",
+          "references/027-react-02.md",
+          "references/027-react-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/shadcn.csv",
+        "sha256": "e56cfde5b74907836ac3582a4779d5b7f3d206a702ab81b8669a1b668c3eeb51",
+        "pages": [
+          "references/028-shadcn-01.md",
+          "references/028-shadcn-02.md",
+          "references/028-shadcn-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/svelte.csv",
+        "sha256": "f6e379ba802941ba26b01d4ffbe3cd39120f2587659a1d93851c707f66bc13db",
+        "pages": [
+          "references/029-svelte-01.md",
+          "references/029-svelte-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/swiftui.csv",
+        "sha256": "bdd9231ff3ad658f4e7c063e1eb49df2fd09ac8d90631a86df899b39833b9623",
+        "pages": [
+          "references/030-swiftui-01.md",
+          "references/030-swiftui-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/threejs.csv",
+        "sha256": "155d583b9c64da0df4b6c6cb060c02eab222505e0734d6353da02c9e2b5d982b",
+        "pages": [
+          "references/031-threejs-01.md",
+          "references/031-threejs-02.md",
+          "references/031-threejs-03.md",
+          "references/031-threejs-04.md",
+          "references/031-threejs-05.md",
+          "references/031-threejs-06.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/uno.csv",
+        "sha256": "a0474363e4225b5367214d5675fd3e075f137026f9500f0d04357882ef4f6d48",
+        "pages": [
+          "references/032-uno-01.md",
+          "references/032-uno-02.md",
+          "references/032-uno-03.md",
+          "references/032-uno-04.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/uwp.csv",
+        "sha256": "c409f08c1fbba1f1029f1acaa554e7b4471cc85517a5751c9f2e62465badcd5c",
+        "pages": [
+          "references/033-uwp-01.md",
+          "references/033-uwp-02.md",
+          "references/033-uwp-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/vue.csv",
+        "sha256": "b655f1ebb9dff2652d15981f31b1784c8a6d4759efd2815a14f3088257569f95",
+        "pages": [
+          "references/034-vue-01.md",
+          "references/034-vue-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/winui.csv",
+        "sha256": "e676dc1c13ee6c205c40b0746f1335150a346c7a49a0616d2545bc3d2c930c85",
+        "pages": [
+          "references/035-winui-01.md",
+          "references/035-winui-02.md",
+          "references/035-winui-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".claude/skills/ui-ux-pro-max/data/stacks/wpf.csv",
+        "sha256": "9781a9950b20333637b30a02e498b7efca21b618a3eeb8665836f3ac6e974da7",
+        "pages": [
+          "references/036-wpf-01.md",
+          "references/036-wpf-02.md",
+          "references/036-wpf-03.md"
+        ]
+      }
+    ],
+    "adaptation": "Chinese entrypoint; upstream text split without rewriting; no upstream runtimes installed."
+  },
+  {
+    "id": "graphify",
+    "repository": "https://github.com/Graphify-Labs/graphify",
+    "commit": "0a8cd4e1e342235fe53e881fb5d591bf0460071f",
+    "archiveSha256": "70d453a4ee902b3b8f3a9f8e618a3cd3cdbcf47c83978f56cec9514cd35a2a25",
+    "license": "Apache-2.0",
+    "primary": "graphify/skill-codex.md",
+    "resources": [
+      {
+        "upstreamPath": "graphify/skill-codex.md",
+        "sha256": "e1150326f0ed06db45e735ecb92b9d3048c9d165d61f61c5ecc728758a9c21f2",
+        "pages": [
+          "references/000-skill-codex-01.md",
+          "references/000-skill-codex-02.md",
+          "references/000-skill-codex-03.md",
+          "references/000-skill-codex-04.md",
+          "references/000-skill-codex-05.md",
+          "references/000-skill-codex-06.md"
+        ]
+      },
+      {
+        "upstreamPath": "graphify/skills/codex/references/add-watch.md",
+        "sha256": "1e77351815547334c7e030f018dba513b303d397bf73d11fac47df03ace3b3f4",
+        "pages": [
+          "references/001-add-watch-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "graphify/skills/codex/references/exports.md",
+        "sha256": "c39a2f8062be9a5ac319220d6e66ca586ed0b0798292b1321206834be74c1b33",
+        "pages": [
+          "references/002-exports-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "graphify/skills/codex/references/extraction-spec.md",
+        "sha256": "e14c596c524ae8c41c796788af00ae9574ff7c5fe131ecbd2ca9def92a19a9cb",
+        "pages": [
+          "references/003-extraction-spec-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "graphify/skills/codex/references/github-and-merge.md",
+        "sha256": "e5ebd90c7686f50363ff7a535556bc2f596d4c47ec1e6c8b95e11e36a0dfea2b",
+        "pages": [
+          "references/004-github-and-merge-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "graphify/skills/codex/references/hooks.md",
+        "sha256": "b9a4e9f66813c6fc720589f1071d1a03c95756ab7101447e14e57291fe7844e5",
+        "pages": [
+          "references/005-hooks-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "graphify/skills/codex/references/query.md",
+        "sha256": "e99011beeff0cf40dc1775b1e0cd2eab0e5f950deeeb8353ae01cbe57adbff00",
+        "pages": [
+          "references/006-query-01.md",
+          "references/006-query-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "graphify/skills/codex/references/transcribe.md",
+        "sha256": "676a1e39aa6d43cdfcc416ec56616e36f7bad74066a82bd33a9485515b9a865c",
+        "pages": [
+          "references/007-transcribe-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "graphify/skills/codex/references/update.md",
+        "sha256": "c76b855ef9380d766b1a0b271b49bc7b40cf5b5b72558be1a021f99f9a9ea1cc",
+        "pages": [
+          "references/008-update-01.md",
+          "references/008-update-02.md"
+        ]
+      }
+    ],
+    "adaptation": "Chinese entrypoint; upstream text split without rewriting; no upstream runtimes installed."
+  },
+  {
+    "id": "archify",
+    "repository": "https://github.com/tt-a1i/archify",
+    "commit": "d6059331abbddb49bca380ff46dca8ce33158b04",
+    "archiveSha256": "2659621a4667a6ae81c577a4f0973ff9204b44febcf9618afe772831341f6d4e",
+    "license": "Apache-2.0",
+    "primary": "archify/SKILL.md",
+    "resources": [
+      {
+        "upstreamPath": "archify/SKILL.md",
+        "sha256": "1382cfb7108b05e500b82af93c04fd7b694430d3908039bd92d634f01c1e7181",
+        "pages": [
+          "references/000-skill-01.md",
+          "references/000-skill-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "archify/references/architecture-layout-repair.md",
+        "sha256": "6c90caa232c004fa43b8770c745b83672919deaf8909f2592a3ad5fcd4031953",
+        "pages": [
+          "references/001-architecture-layout-repair-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "archify/references/authoring-contract.md",
+        "sha256": "c7c9918ee28e213defd4cb504f0440ae366a8db4665938d2a0db0b62da565901",
+        "pages": [
+          "references/002-authoring-contract-01.md",
+          "references/002-authoring-contract-02.md",
+          "references/002-authoring-contract-03.md",
+          "references/002-authoring-contract-04.md",
+          "references/002-authoring-contract-05.md"
+        ]
+      },
+      {
+        "upstreamPath": "archify/references/authoring-defaults.md",
+        "sha256": "11a2c60b31cb8a4bc19e83ff2e8351c1b5af93cfa091512e6d053a13288eaf6c",
+        "pages": [
+          "references/003-authoring-defaults-01.md",
+          "references/003-authoring-defaults-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "archify/references/brand-marks.md",
+        "sha256": "d6e1a6ceafd07e48f27caf01655ea642365a5416ed0543b4022ca62750b58f0f",
+        "pages": [
+          "references/004-brand-marks-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "archify/references/delivery-contract.md",
+        "sha256": "0e283a418871a19c7adcc493c461ae6180e9b233f14ad95a19a9c15e109d2415",
+        "pages": [
+          "references/005-delivery-contract-01.md",
+          "references/005-delivery-contract-02.md",
+          "references/005-delivery-contract-03.md",
+          "references/005-delivery-contract-04.md",
+          "references/005-delivery-contract-05.md",
+          "references/005-delivery-contract-06.md"
+        ]
+      },
+      {
+        "upstreamPath": "archify/references/explainer-authoring.md",
+        "sha256": "722c126f05192da499f75468e9c1b3001daa4a844894ebf45a854b6687a4af18",
+        "pages": [
+          "references/006-explainer-authoring-01.md",
+          "references/006-explainer-authoring-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "archify/references/repository-authoring.md",
+        "sha256": "c1648fc0c1b85a3a9bfbf3a8919dfa741ff0b5a55ea310d1fcacbf6ee837e139",
+        "pages": [
+          "references/007-repository-authoring-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "archify/references/update-awareness.md",
+        "sha256": "16b437a47790fda48f0e74f6aa053715fb06b6e8cd1ba994d1c01ffefa12a76b",
+        "pages": [
+          "references/008-update-awareness-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "archify/references/viewer-runtime.md",
+        "sha256": "7d35ef52a8f47e77e8ec827cea7c71219bf1aafa53b5ef72ad4f1e1437f882a4",
+        "pages": [
+          "references/009-viewer-runtime-01.md"
+        ]
+      }
+    ],
+    "adaptation": "Chinese entrypoint; upstream text split without rewriting; no upstream runtimes installed."
+  },
+  {
+    "id": "impeccable",
+    "repository": "https://github.com/pbakaus/impeccable",
+    "commit": "3e3a9179e01a60265000ce239c0a99803ec1e60d",
+    "archiveSha256": "43c6643bc272411ae419522cbf659dbfb803a2ce764949512a3e2f25eea7e09b",
+    "license": "Apache-2.0",
+    "primary": ".agents/skills/impeccable/SKILL.md",
+    "resources": [
+      {
+        "upstreamPath": ".agents/skills/impeccable/SKILL.md",
+        "sha256": "fab04b31f946573b00a8559db1fc070f8ea5825254d491c2b13156e5661a86d7",
+        "pages": [
+          "references/000-skill-01.md",
+          "references/000-skill-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/adapt.md",
+        "sha256": "9807cdc112b8bcbdeff9cd2516cda4d07129f1d47f29df4d57645344f34950c1",
+        "pages": [
+          "references/001-adapt-01.md",
+          "references/001-adapt-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/adapt.native.md",
+        "sha256": "2455a2613e1fa29b986521c73cbad9424ccda70ef6cbe505779dbca5e16272a2",
+        "pages": [
+          "references/002-adapt-native-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/android.md",
+        "sha256": "43780abcf10ac12a569d98001ae38af2b337727a0f7ce66268246ac1d54b5d34",
+        "pages": [
+          "references/003-android-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/animate.md",
+        "sha256": "d658c48ffbe0031e8e3b318996cad6ceafe29e40aa50d5bb25e4bf1d6839dc7c",
+        "pages": [
+          "references/004-animate-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/audit.md",
+        "sha256": "5ba9e3a090fc4c4d212c8cbfa5a48f7454ceb10fa81a284b4a7b4e8351ece2f1",
+        "pages": [
+          "references/005-audit-01.md",
+          "references/005-audit-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/audit.native.md",
+        "sha256": "2898eff507738f9102107809e671df3e69f889dee30073030fe96fb2483d8ea3",
+        "pages": [
+          "references/006-audit-native-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/bolder.md",
+        "sha256": "05b78fb0595e4d5afbf5f17470c84e89cf82f205fea3a6e9b6d8d779b7c4aab1",
+        "pages": [
+          "references/007-bolder-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/clarify.md",
+        "sha256": "173dd66abe65633910dcb04a51f40d6ff2a793f87088f022a02fc4cad24dd133",
+        "pages": [
+          "references/008-clarify-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/colorize.md",
+        "sha256": "bc5f71f1129d0f2c310d913d07c8dc609a1d25644121bd78c308f42d52a0b9e9",
+        "pages": [
+          "references/009-colorize-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/component-review.md",
+        "sha256": "10489e5265e49a4ef2737cd0e674c149ed41e1f703efe922e53ea3c91e833427",
+        "pages": [
+          "references/010-component-review-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/craft-floor.md",
+        "sha256": "808a50e0e6c74617a07b0eaf7fd80f58d8e48a13f48e47c658c7534b1724e5c2",
+        "pages": [
+          "references/011-craft-floor-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/craft.md",
+        "sha256": "9205e222bc6565b37fb504ceec93233c2d2a456802b69d16e6b1c44723907c4c",
+        "pages": [
+          "references/012-craft-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/critique.md",
+        "sha256": "c210c9506877c6c8d88880a337fddd95d4315daf70ed6bc631ee6520481f1a0c",
+        "pages": [
+          "references/013-critique-01.md",
+          "references/013-critique-02.md",
+          "references/013-critique-03.md",
+          "references/013-critique-04.md",
+          "references/013-critique-05.md",
+          "references/013-critique-06.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/delight.md",
+        "sha256": "098a891028ce59c212b747d3c70468dd750aff7053a703d1336045ed31e0da7c",
+        "pages": [
+          "references/014-delight-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/distill.md",
+        "sha256": "8b9283510e38f0d190652f300ea0793acfb5a514b38b991fdc0a289bade83391",
+        "pages": [
+          "references/015-distill-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/doctor.md",
+        "sha256": "33aff200de6f76a74b333d7ae4f7d2f4fc2a0da4c1a57264567d88eb8f33b52b",
+        "pages": [
+          "references/016-doctor-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/document.md",
+        "sha256": "7e7e97388cac7b5af7afa5b6fec19a6576c89ce6a998c973cb007b8e5494a8c9",
+        "pages": [
+          "references/017-document-01.md",
+          "references/017-document-02.md",
+          "references/017-document-03.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/extract.md",
+        "sha256": "5477ae97189e5c1236cee71a25a5ae50014429a5a2e6da28355c8021a6cdeddd",
+        "pages": [
+          "references/018-extract-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/generate.md",
+        "sha256": "11385badfb532196cec249e73bac2b7f58ada033ed8c4b02b9f0d64ddb46f0dc",
+        "pages": [
+          "references/019-generate-01.md",
+          "references/019-generate-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/harden.md",
+        "sha256": "4167eb7fc456cdfe09ff0ac2dbcb5e59cee57e590137aab6cc8ec08aafb6d775",
+        "pages": [
+          "references/020-harden-01.md",
+          "references/020-harden-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/hooks.md",
+        "sha256": "827c9018836942166536c5e4f087f6523d058e94b161fcf7d3e04f0fb599434c",
+        "pages": [
+          "references/021-hooks-01.md",
+          "references/021-hooks-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/init.md",
+        "sha256": "51349b3a32c7f907102dd680d8e2df9da27082caf46ee15c673be7ce14a5363b",
+        "pages": [
+          "references/022-init-01.md",
+          "references/022-init-02.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/ios.md",
+        "sha256": "40c87038b5f75147a5952a96237acf312a327bf70c1bcd8e0a5f064625ae9668",
+        "pages": [
+          "references/023-ios-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/layout.md",
+        "sha256": "0bc7d7971b3edf2acd0580e847458dc6d84129d90715b452799ace3bed815c7c",
+        "pages": [
+          "references/024-layout-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/live-setup.md",
+        "sha256": "2b5b2fbf5f658f34ea1997fb1aeebe01604d05187f75c6a4f1f55a5bc78520a4",
+        "pages": [
+          "references/025-live-setup-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/live.md",
+        "sha256": "8735aa99406752a1d4bf903051ee9e9e6e3be1f4821c044b1f63d2a0556a6935",
+        "pages": [
+          "references/026-live-01.md",
+          "references/026-live-02.md",
+          "references/026-live-03.md",
+          "references/026-live-04.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/mode-operate.md",
+        "sha256": "7a52dd7a94ee75f6ae89542c86a1b6e1d306812b16e0d9dbf12d4acad44d148b",
+        "pages": [
+          "references/027-mode-operate-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/mode-persuade.md",
+        "sha256": "21e78c8a77badb3f83290cd4577ed3b24bd4dd3b57136d7da75733d4f3ee9ac0",
+        "pages": [
+          "references/028-mode-persuade-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/mode-read.md",
+        "sha256": "a569989e6a3d6453b4c45e9474e162a15cc54e11732ac6baa7990a6e7cccc0b5",
+        "pages": [
+          "references/029-mode-read-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/new-work.md",
+        "sha256": "e23f8944f8962a36dc01e1b0bfacc55bb754633b3686e83ae53a40af97444118",
+        "pages": [
+          "references/030-new-work-01.md",
+          "references/030-new-work-02.md",
+          "references/030-new-work-03.md",
+          "references/030-new-work-04.md",
+          "references/030-new-work-05.md",
+          "references/030-new-work-06.md",
+          "references/030-new-work-07.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/onboard.md",
+        "sha256": "a2b8fd01ea12139b39b3285393f805bb8c326e11b2234dbff4c26c17b4e9c280",
+        "pages": [
+          "references/031-onboard-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/operate.md",
+        "sha256": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d",
+        "pages": [
+          "references/032-operate-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/optimize.md",
+        "sha256": "092c85e5a644e6e528aaff0f341ee1ed57e012c195162fef0a5fc97605f9bb73",
+        "pages": [
+          "references/033-optimize-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/overdrive.md",
+        "sha256": "0a0d4ae6eea720c6d6e1c073fc77192d7c2100f78a44d9a8d262ddf22270cf4d",
+        "pages": [
+          "references/034-overdrive-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/polish.md",
+        "sha256": "81666fc7f783b4e3514db6554e713dc0479bd9cdedb06e93d15f8b579aae869a",
+        "pages": [
+          "references/035-polish-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/quieter.md",
+        "sha256": "9e03b55c6bbdd4acba28cfa9c3b74ba1a4448cdbd35a7200990ab460c6eecaa0",
+        "pages": [
+          "references/036-quieter-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/region-map.md",
+        "sha256": "778cedc9199b407d3e23fa1041e38d548b00b1101a33517aa2a2eb299f9d0edc",
+        "pages": [
+          "references/037-region-map-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/routing.md",
+        "sha256": "77ae09542fbc10aa4e8b119d6fd19359908a47c13c30068d6a150bfdb50e3e10",
+        "pages": [
+          "references/038-routing-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/shape.md",
+        "sha256": "a55f016c046cb6a27c55bd7f346375aeb506a755c4fbca19a5f92dbd42309c23",
+        "pages": [
+          "references/039-shape-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/typeset.md",
+        "sha256": "c26c5b4524f3ccb650ed0680c10c25fd18083f8ebfd00a54c4d983c4747aab70",
+        "pages": [
+          "references/040-typeset-01.md"
+        ]
+      },
+      {
+        "upstreamPath": ".agents/skills/impeccable/reference/visualize.md",
+        "sha256": "0c431d0dafbcac7ae8bde70ffa622f9ee542c44ec12e14b48bb44b269bef67eb",
+        "pages": [
+          "references/041-visualize-01.md",
+          "references/041-visualize-02.md"
+        ]
+      }
+    ],
+    "adaptation": "Chinese entrypoint; upstream text split without rewriting; no upstream runtimes installed."
+  },
+  {
+    "id": "i-have-adhd",
+    "repository": "https://github.com/ayghri/i-have-adhd",
+    "commit": "1ecea1993b7fce257ffbd686c070948b5e07eda6",
+    "archiveSha256": "34ffa5371dd8d8943c481dcc233417a45d8ece2054e758e7bf92fb01095288f3",
+    "license": "MIT",
+    "primary": "skills/i-have-adhd/SKILL.md",
+    "resources": [
+      {
+        "upstreamPath": "skills/i-have-adhd/SKILL.md",
+        "sha256": "88955c019bbb1419ff4b49dbb1f80a867467de6233d7865af2e06a7d7b76c7d3",
+        "pages": [
+          "references/000-skill-01.md"
+        ]
+      }
+    ],
+    "adaptation": "Chinese entrypoint; upstream text split without rewriting; no upstream runtimes installed."
+  },
+  {
+    "id": "humanizer",
+    "repository": "https://github.com/blader/humanizer",
+    "commit": "8c307f367c91bd974002f10f2be2965d642c13df",
+    "archiveSha256": "b1210453bc037f534d4d92cfb9b6dce194ac1428a9b11a79392009488b4d6da1",
+    "license": "MIT",
+    "primary": "SKILL.md",
+    "resources": [
+      {
+        "upstreamPath": "SKILL.md",
+        "sha256": "0612f1dfb1672b0ea9b97e139bf1f06cabe98d8b27424fe8ff01e1fb4cc99cad",
+        "pages": [
+          "references/000-skill-01.md",
+          "references/000-skill-02.md",
+          "references/000-skill-03.md",
+          "references/000-skill-04.md"
+        ]
+      }
+    ],
+    "adaptation": "Chinese entrypoint; upstream text split without rewriting; no upstream runtimes installed."
+  },
+  {
+    "id": "diagram-design",
+    "repository": "https://github.com/cathrynlavery/diagram-design",
+    "commit": "0cf73c3fcc56667ad91a9a04c439ac6ccfabc9d1",
+    "archiveSha256": "18713e69c843aac3ea981dfa45b9e4f846815618aac7ce051fb988f26c2cde3a",
+    "license": "MIT",
+    "primary": "skills/diagram-design/SKILL.md",
+    "resources": [
+      {
+        "upstreamPath": "skills/diagram-design/SKILL.md",
+        "sha256": "83fd5aa46965ce2b14bd42ade80c065a4e17a9f83d2a9f4f275b47cd45d72666",
+        "pages": [
+          "references/000-skill-01.md",
+          "references/000-skill-02.md",
+          "references/000-skill-03.md",
+          "references/000-skill-04.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-architecture-containment.html",
+        "sha256": "10013c62e6449880627c2271edacfdc094f006a16e365a55f117e844097fe2de",
+        "pages": [
+          "references/001-example-architecture-containment-01.md",
+          "references/001-example-architecture-containment-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-architecture-delta.html",
+        "sha256": "0a88e1e44fcac97be87accccb429c4930380938f59534468090e82c45ceabfc6",
+        "pages": [
+          "references/002-example-architecture-delta-01.md",
+          "references/002-example-architecture-delta-02.md",
+          "references/002-example-architecture-delta-03.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-architecture.html",
+        "sha256": "a9e8b59854d31e70288abba522509494f82a319bc684c3694e08e67dfc990bc5",
+        "pages": [
+          "references/003-example-architecture-01.md",
+          "references/003-example-architecture-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-campus.html",
+        "sha256": "5d03a724dd85ec929dd17643294dbec7a6fd6165ee010fd0fef44dc72bdf1e31",
+        "pages": [
+          "references/004-example-axonometric-plan-campus-01.md",
+          "references/004-example-axonometric-plan-campus-02.md",
+          "references/004-example-axonometric-plan-campus-03.md",
+          "references/004-example-axonometric-plan-campus-04.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-coffee-shop.html",
+        "sha256": "90f8f78c306ea5b96b64c6c5c5e68c85e13fdd9a4f40aecc25dccf1f9b34283e",
+        "pages": [
+          "references/005-example-axonometric-plan-coffee-shop-01.md",
+          "references/005-example-axonometric-plan-coffee-shop-02.md",
+          "references/005-example-axonometric-plan-coffee-shop-03.md",
+          "references/005-example-axonometric-plan-coffee-shop-04.md",
+          "references/005-example-axonometric-plan-coffee-shop-05.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan-warehouse.html",
+        "sha256": "aed38ba8afc9c560fe22c7cbba1448e3c8f0efe43853d2c457b32e76d1bfef76",
+        "pages": [
+          "references/006-example-axonometric-plan-warehouse-01.md",
+          "references/006-example-axonometric-plan-warehouse-02.md",
+          "references/006-example-axonometric-plan-warehouse-03.md",
+          "references/006-example-axonometric-plan-warehouse-04.md",
+          "references/006-example-axonometric-plan-warehouse-05.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-axonometric-plan.html",
+        "sha256": "1ffd4767dbb9c0fd49190582a7304d0aac4cd6df7cd7d538eb6e84cd1803f30a",
+        "pages": [
+          "references/007-example-axonometric-plan-01.md",
+          "references/007-example-axonometric-plan-02.md",
+          "references/007-example-axonometric-plan-03.md",
+          "references/007-example-axonometric-plan-04.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-bar.html",
+        "sha256": "b82fea59d393f0754f1543cf1e8d9189542fb93cf458bcd256a0c56fa060461b",
+        "pages": [
+          "references/008-example-bar-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-beeswarm.html",
+        "sha256": "e69a9b7ac33fae509c02a1ef06b39e1a548cd3925644e7cefd3ff2119a88a060",
+        "pages": [
+          "references/009-example-beeswarm-01.md",
+          "references/009-example-beeswarm-02.md",
+          "references/009-example-beeswarm-03.md",
+          "references/009-example-beeswarm-04.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-box-plot.html",
+        "sha256": "16449419e0cca7dc153bc23c9c416dcb149ddcdfe4ca45c9535708719aa0b909",
+        "pages": [
+          "references/010-example-box-plot-01.md",
+          "references/010-example-box-plot-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-bubble.html",
+        "sha256": "48f6b009e1a05d780a66a8f9f3c3c9323da5aa3a6f7f6c50003558b4ba163657",
+        "pages": [
+          "references/011-example-bubble-01.md",
+          "references/011-example-bubble-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-bump.html",
+        "sha256": "cdf62733836ff70f2b04e3a9062609b24f17d3b8be60d110a8182f9bc12a02a7",
+        "pages": [
+          "references/012-example-bump-01.md",
+          "references/012-example-bump-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-data-flow.html",
+        "sha256": "f65978b77410fff9993fc099f4cf0d25bcaf67ce98fea2e281976e2406783b99",
+        "pages": [
+          "references/013-example-data-flow-01.md",
+          "references/013-example-data-flow-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-datalake.html",
+        "sha256": "579fe3bc65fc82d342e00c565a2d0d6cc5f5c81ca51d6b832beb9a78ba3b959a",
+        "pages": [
+          "references/014-example-datalake-01.md",
+          "references/014-example-datalake-02.md",
+          "references/014-example-datalake-03.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-db-schema.html",
+        "sha256": "5b65adae081c31b8f4a9772d8ba4a4066e759625197e2111885ac503cf8c2104",
+        "pages": [
+          "references/015-example-db-schema-01.md",
+          "references/015-example-db-schema-02.md",
+          "references/015-example-db-schema-03.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-dependency.html",
+        "sha256": "c75e1d72834ed4bbdd57f7470136d272f13d0cc7c41b02e84ae187553a6e893b",
+        "pages": [
+          "references/016-example-dependency-01.md",
+          "references/016-example-dependency-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-deployment.html",
+        "sha256": "8e4cee0bc1105dcd040b19d0000f84c69f81bde75d4cb16d2261fab617a7aee5",
+        "pages": [
+          "references/017-example-deployment-01.md",
+          "references/017-example-deployment-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-dp-integration.html",
+        "sha256": "d521d09532183ee10d5ebdcea9cbc509a45d90cd85c35973ba40dbe94f338291",
+        "pages": [
+          "references/018-example-dp-integration-01.md",
+          "references/018-example-dp-integration-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-dp-security-matrix.html",
+        "sha256": "9ae674dcec652483ea75a9368f88fd4c61a447b34354b2f2386049c10491e83f",
+        "pages": [
+          "references/019-example-dp-security-matrix-01.md",
+          "references/019-example-dp-security-matrix-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-er.html",
+        "sha256": "dcbca24c5eeeb84711510a60fae190754503f9b57d9551936b086f3fb589f617",
+        "pages": [
+          "references/020-example-er-01.md",
+          "references/020-example-er-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-exploded-ai-stack.html",
+        "sha256": "d2ac4530f8e3fb8eb9b4f344704ab9c36c3e983e6e5f8725250df1aa06b0ef2b",
+        "pages": [
+          "references/021-example-exploded-ai-stack-01.md",
+          "references/021-example-exploded-ai-stack-02.md",
+          "references/021-example-exploded-ai-stack-03.md",
+          "references/021-example-exploded-ai-stack-04.md",
+          "references/021-example-exploded-ai-stack-05.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-exploded-keyboard.html",
+        "sha256": "858d60f2af6025301751a296125aca03cd7ea253d3efa8fef0e74df953992dc8",
+        "pages": [
+          "references/022-example-exploded-keyboard-01.md",
+          "references/022-example-exploded-keyboard-02.md",
+          "references/022-example-exploded-keyboard-03.md",
+          "references/022-example-exploded-keyboard-04.md",
+          "references/022-example-exploded-keyboard-05.md",
+          "references/022-example-exploded-keyboard-06.md",
+          "references/022-example-exploded-keyboard-07.md",
+          "references/022-example-exploded-keyboard-08.md",
+          "references/022-example-exploded-keyboard-09.md",
+          "references/022-example-exploded-keyboard-10.md",
+          "references/022-example-exploded-keyboard-11.md",
+          "references/022-example-exploded-keyboard-12.md",
+          "references/022-example-exploded-keyboard-13.md",
+          "references/022-example-exploded-keyboard-14.md",
+          "references/022-example-exploded-keyboard-15.md",
+          "references/022-example-exploded-keyboard-16.md",
+          "references/022-example-exploded-keyboard-17.md",
+          "references/022-example-exploded-keyboard-18.md",
+          "references/022-example-exploded-keyboard-19.md",
+          "references/022-example-exploded-keyboard-20.md",
+          "references/022-example-exploded-keyboard-21.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-exploded-phone.html",
+        "sha256": "3866a52045df1b95333b09347b010871a73422f785bd7aad5de14fcf1f2189ef",
+        "pages": [
+          "references/023-example-exploded-phone-01.md",
+          "references/023-example-exploded-phone-02.md",
+          "references/023-example-exploded-phone-03.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-exploded-unboxing.html",
+        "sha256": "9cbec60cb42ca24315f5e3392485699d24a3d22cd0879e128eae5d3988b4333f",
+        "pages": [
+          "references/024-example-exploded-unboxing-01.md",
+          "references/024-example-exploded-unboxing-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-exploded.html",
+        "sha256": "07eb320afdaa31516c221a80a9ae6a8e72be62185a8b790841237db823ef638a",
+        "pages": [
+          "references/025-example-exploded-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-fishbone.html",
+        "sha256": "d0925f006f7ae339b7e3467886dc069e73def905e1316a5de00b2baeb61a63b2",
+        "pages": [
+          "references/026-example-fishbone-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-flowchart.html",
+        "sha256": "f9c92596d77b010417b78f710ae96cf161395831ad8e51153caa41fa4a31446c",
+        "pages": [
+          "references/027-example-flowchart-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-gantt.html",
+        "sha256": "4e017a543771aec9338e15df3be5f9278fa4883e306373c4ea0555b65c7c43a4",
+        "pages": [
+          "references/028-example-gantt-01.md",
+          "references/028-example-gantt-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-heatmap.html",
+        "sha256": "18ee707bd2235b0530250218a4aa98574db42abcbfa02dae92c70b48cb0261da",
+        "pages": [
+          "references/029-example-heatmap-01.md",
+          "references/029-example-heatmap-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-high-level-vertical.html",
+        "sha256": "371385a4fd00a7d9f3896ac44417352bd7276e86488c3f4eaa72bd6df2902ae7",
+        "pages": [
+          "references/030-example-high-level-vertical-01.md",
+          "references/030-example-high-level-vertical-02.md",
+          "references/030-example-high-level-vertical-03.md",
+          "references/030-example-high-level-vertical-04.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-high-level.html",
+        "sha256": "7fc2cd00413de7a5221dde192403f87a8bef883984f8331f64c56f3bc387fa5e",
+        "pages": [
+          "references/031-example-high-level-01.md",
+          "references/031-example-high-level-02.md",
+          "references/031-example-high-level-03.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-import-drawio.html",
+        "sha256": "4404af257bf1216ef9959f3340cd82f2117d29d548b571e94ccf7931d4dd6bcd",
+        "pages": [
+          "references/032-example-import-drawio-01.md",
+          "references/032-example-import-drawio-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-import-excalidraw.html",
+        "sha256": "8a09e53ae6b0efbb9360784917117e784f90da53a4cc1de2a838e3ccef57d712",
+        "pages": [
+          "references/033-example-import-excalidraw-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-import-mermaid.html",
+        "sha256": "ed6109da74fe8fa2f5d6385ef1dda20e1b2d95c3e3d2d274499362de1aa20db9",
+        "pages": [
+          "references/034-example-import-mermaid-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-it-state.html",
+        "sha256": "9a91ec8959b77734745ddfa19f3dbf2992a3bf1134cb7352b9778ab3253e8d5b",
+        "pages": [
+          "references/035-example-it-state-01.md",
+          "references/035-example-it-state-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-journey.html",
+        "sha256": "3703a5f553e1daabbf17d9785626ab63508bde326967bbce1390c1a72a0f2b37",
+        "pages": [
+          "references/036-example-journey-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-kanban.html",
+        "sha256": "9171e229f6ca68c228a8ab3f47bd4a4b69f2ea77c2738282713a5f6271b32e1e",
+        "pages": [
+          "references/037-example-kanban-01.md",
+          "references/037-example-kanban-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-layers.html",
+        "sha256": "e4edabd125d9d9de3e27d2a530b7e791042910e97ec71c3d8e23912eafda5082",
+        "pages": [
+          "references/038-example-layers-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-line.html",
+        "sha256": "8d53adb388306a8593a72c4eea063b8a95a0ba79d2134f51313a645c2554e227",
+        "pages": [
+          "references/039-example-line-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-loop-terminal.html",
+        "sha256": "93a2f86cca043537bf472973c6c1d51de54d85208ec54cd448c40e3f09aa73e8",
+        "pages": [
+          "references/040-example-loop-terminal-01.md",
+          "references/040-example-loop-terminal-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-loop.html",
+        "sha256": "7346157c67b6994b274772d0ffeb6c5ae2e935991246bd541e4aab84e31f3a8d",
+        "pages": [
+          "references/041-example-loop-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-marimekko.html",
+        "sha256": "2b1407bcdc69114d3c74ac4a7e257d5081212b87c2aff05913044fc622c46b4a",
+        "pages": [
+          "references/042-example-marimekko-01.md",
+          "references/042-example-marimekko-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-medallion.html",
+        "sha256": "ccd63d89878af1f9d1bcc83e126ea11254f4bbfedb3d87a21e7242793cb2c526",
+        "pages": [
+          "references/043-example-medallion-01.md",
+          "references/043-example-medallion-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-nested.html",
+        "sha256": "fd4001be8af64a8aeae2c9b46e6f476030fcd8791ea3f9b508a503fc5bc70ffb",
+        "pages": [
+          "references/044-example-nested-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-org-chart.html",
+        "sha256": "82356766f5d5af0c10fa60a728c784674138c45416933c15f58d5553a7f4b9b4",
+        "pages": [
+          "references/045-example-org-chart-01.md",
+          "references/045-example-org-chart-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-polar.html",
+        "sha256": "3bbfe08f63c9be96cecfdb7432b8236d2f0788bf6008e69254cbbef18cd3fc39",
+        "pages": [
+          "references/046-example-polar-01.md",
+          "references/046-example-polar-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-process.html",
+        "sha256": "7c336a00d6a63fbebd2f9055af8df1b421f25a209900aa70c4028cd747982fb5",
+        "pages": [
+          "references/047-example-process-01.md",
+          "references/047-example-process-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-pyramid.html",
+        "sha256": "a49c1dd8f932ea82253c7fbbec54365cb722ae65fba975a15c2aa392c27c5fbf",
+        "pages": [
+          "references/048-example-pyramid-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-quadrant-consultant.html",
+        "sha256": "0eff4b878e56a0ca3104457128254b1c5b329dc7ed6f891c10807063ccdfb983",
+        "pages": [
+          "references/049-example-quadrant-consultant-01.md",
+          "references/049-example-quadrant-consultant-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-quadrant.html",
+        "sha256": "95f6100d6059a773bcce44d42a9eedba925226c65cacf6613b8488330ae09934",
+        "pages": [
+          "references/050-example-quadrant-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-radar.html",
+        "sha256": "9572164b5aa0d8d1e0e713e8ffb7ef750d0b04e06d3eb842829fa4bdaaaff2c1",
+        "pages": [
+          "references/051-example-radar-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-ridgeline.html",
+        "sha256": "8c6a17edea0742642bfa991ba353c414d2e7608fff09c073d52c3f9de2d71337",
+        "pages": [
+          "references/052-example-ridgeline-01.md",
+          "references/052-example-ridgeline-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-sankey.html",
+        "sha256": "5997eca7d06b41cc779abed904ef1b782a5d9be160f9dffcb0fef067142b904f",
+        "pages": [
+          "references/053-example-sankey-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-scatter.html",
+        "sha256": "baa3fe5115e6a0448fd90629c20729b78eb735d5d95b74501f8d3d0fd8183980",
+        "pages": [
+          "references/054-example-scatter-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-sequence-oauth.html",
+        "sha256": "40b38df11cb54fe055c223a44ddaa7363a2ec0c030dc995e7951a1fb8df42083",
+        "pages": [
+          "references/055-example-sequence-oauth-01.md",
+          "references/055-example-sequence-oauth-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-sequence.html",
+        "sha256": "aac9bfcad5a001206567a577e9816e3d0904bb3e1afc9d8505fb576b93292db8",
+        "pages": [
+          "references/056-example-sequence-01.md",
+          "references/056-example-sequence-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-service-blueprint.html",
+        "sha256": "e7c29fa4e09c5a7cff1ec75ee2310e3f1d623f4df80854dc2d72a2dd87c31c87",
+        "pages": [
+          "references/057-example-service-blueprint-01.md",
+          "references/057-example-service-blueprint-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-slopegraph.html",
+        "sha256": "c20f22a1ba7ae6388d3fae506927242173475f6447da655a96f06f92adfd706e",
+        "pages": [
+          "references/058-example-slopegraph-01.md",
+          "references/058-example-slopegraph-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-state-lifecycle.html",
+        "sha256": "0c8406d87facec01143bc4356d896a3ffdc7c429ae481e7ee9fbcd06bfae674c",
+        "pages": [
+          "references/059-example-state-lifecycle-01.md",
+          "references/059-example-state-lifecycle-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-state.html",
+        "sha256": "33a210ded8261c3117222a7d897a17ccddae89267c4779f19eeaf868a5545a15",
+        "pages": [
+          "references/060-example-state-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-story-map.html",
+        "sha256": "2e8765e83ee8fb3c62bd31105d3a73b9f11400035036466d14ec59874e194dde",
+        "pages": [
+          "references/061-example-story-map-01.md",
+          "references/061-example-story-map-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-streamgraph.html",
+        "sha256": "92f45dca6ce38436d1a790424ec1212b4b5eed74a1a309f85fa037c68facbff5",
+        "pages": [
+          "references/062-example-streamgraph-01.md",
+          "references/062-example-streamgraph-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-swimlane.html",
+        "sha256": "c044be167127091b9bc442fdfe7d1dea439a7de23ea2c9819fb8382e511bb6e9",
+        "pages": [
+          "references/063-example-swimlane-01.md",
+          "references/063-example-swimlane-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-timeline.html",
+        "sha256": "d853c86bfd40491d5b747a07ca10b9d55d3349701ca01f508d83ba972b805788",
+        "pages": [
+          "references/064-example-timeline-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-tree-block-decomposition.html",
+        "sha256": "c5f3051ea93495e6b040d25642ca7a5e67664678bb5e3147509404ed068551da",
+        "pages": [
+          "references/065-example-tree-block-decomposition-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-tree.html",
+        "sha256": "6812d3e99c21ddc29d346cfb3713ea997bd6ac1fcb5b29b5c764c200afa0ea20",
+        "pages": [
+          "references/066-example-tree-01.md",
+          "references/066-example-tree-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-treemap.html",
+        "sha256": "224c33a048dc64cbbd687bd826a3a09c8178dcd3d311ea3b53bc43f767f420f6",
+        "pages": [
+          "references/067-example-treemap-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-uml-class.html",
+        "sha256": "98e58c2833cc6b4f2b3e176bbf173907e7168aedf5310cb900d7bdfeb6e22c8d",
+        "pages": [
+          "references/068-example-uml-class-01.md",
+          "references/068-example-uml-class-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-venn.html",
+        "sha256": "a9f6ab1f15906f7618a2f876bc9cd998a1b0be9b31b7e49eeaf42c3c156340f6",
+        "pages": [
+          "references/069-example-venn-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-wardley.html",
+        "sha256": "a386727c65063f36df75e096f963c305ca540799c5005daf079ff05e05428436",
+        "pages": [
+          "references/070-example-wardley-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/example-waterfall.html",
+        "sha256": "501231921ae5065423f75efa6a37fbfc4753ef76d26b9ab116902dc9964ad818",
+        "pages": [
+          "references/071-example-waterfall-01.md",
+          "references/071-example-waterfall-02.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/icons.html",
+        "sha256": "8301219558a40abce2d739def01feda6a8b72adce00f8d60154c989dfb581090",
+        "pages": [
+          "references/072-icons-01.md",
+          "references/072-icons-02.md",
+          "references/072-icons-03.md",
+          "references/072-icons-04.md",
+          "references/072-icons-05.md",
+          "references/072-icons-06.md",
+          "references/072-icons-07.md",
+          "references/072-icons-08.md",
+          "references/072-icons-09.md",
+          "references/072-icons-10.md",
+          "references/072-icons-11.md",
+          "references/072-icons-12.md",
+          "references/072-icons-13.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/index.html",
+        "sha256": "6c5633862bea3f2b0e5e374e345b03f8764ec987252da626f33c6cc93c4f8567",
+        "pages": [
+          "references/073-index-01.md",
+          "references/073-index-02.md",
+          "references/073-index-03.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/template-motion.html",
+        "sha256": "0dc228e58e5810fe99d80b0895515bb9a7f129ced1de2960d343f1e9539d5359",
+        "pages": [
+          "references/074-template-motion-01.md",
+          "references/074-template-motion-02.md",
+          "references/074-template-motion-03.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/template-terminal.html",
+        "sha256": "d449b50f439214cef9025b91f7ad4d8f786c0f329496aa95b5ea864c1586708d",
+        "pages": [
+          "references/075-template-terminal-01.md"
+        ]
+      },
+      {
+        "upstreamPath": "skills/diagram-design/assets/template.html",
+        "sha256": "f6978a9d50dd286f32ab149bcf505261b9fc331df7320071f87509a285dee7f4",
+        "pages": [
+          "references/076-template-01.md"
+        ]
+      }
+    ],
+    "adaptation": "Chinese entrypoint; upstream text split without rewriting; no upstream runtimes installed."
+  },
+  {
+    "id": "book-to-skill",
+    "repository": "https://github.com/virgiliojr94/book-to-skill",
+    "commit": "fece258123879acf4ac6535dc4986b32e13df0c9",
+    "archiveSha256": "7df57500a05ad52299605b6d4b8695a47daabde01bbc5b40a3c1a299b1ff2d95",
+    "license": "MIT",
+    "primary": "SKILL.md",
+    "resources": [
+      {
+        "upstreamPath": "SKILL.md",
+        "sha256": "6a3d7ce3d3689020cd4089f8cad9c0a9f8237abfaf896ff20677031dac4592b1",
+        "pages": [
+          "references/000-skill-01.md",
+          "references/000-skill-02.md",
+          "references/000-skill-03.md",
+          "references/000-skill-04.md",
+          "references/000-skill-05.md",
+          "references/000-skill-06.md"
+        ]
+      }
+    ],
+    "adaptation": "Chinese entrypoint; upstream text split without rewriting; no upstream runtimes installed."
+  }
+]

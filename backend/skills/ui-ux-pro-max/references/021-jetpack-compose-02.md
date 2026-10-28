@@ -1,0 +1,14 @@
+39,DI,No DI in UI,Inject in VM,Constructor inject,Inject composable,Proper scope,Wrong scope,High,https://developer.android.com/topic/architecture/recommendations#dependency-injection,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+40,Accessibility,Content description,Accessible UI,contentDescription,Ignore a11y,Inclusive,A11y fail,Medium,https://developer.android.com/jetpack/compose/accessibility,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+41,Accessibility,Semantics,Use semantics API,Modifier.semantics,None,Testable a11y,Invisible,Medium,,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+42,Animation,Compose animation APIs,Use animate*AsState,AnimatedVisibility,Manual anim,Smooth,Jank,Medium,https://developer.android.com/jetpack/compose/animation,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+43,Animation,Avoid animation logic in VM,Animation is UI concern,Animate in UI,Animate in VM,Correct layering,Mixed concern,Low,,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+44,Modularization,Feature-based UI modules,UI per feature,:feature:ui,God module,Scalable,Tight coupling,High,https://developer.android.com/topic/modularization,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+45,Modularization,Public UI contracts,Expose minimal UI API,Interface/Route,Expose impl,Encapsulated,Leaky module,Medium,,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+46,State,Snapshot state only,Use Compose state,mutableStateOf,Custom observable,Compose aware,Buggy UI,Medium,,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+47,State,Avoid mutable collections,Immutable list/map,PersistentList,MutableList,Stable UI,Silent bug,High,https://developer.android.com/develop/ui/compose/state#other-supported-types-of-state,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+48,Lifecycle,RememberCoroutineScope usage,Only for UI jobs,UI coroutine,Long jobs,Scoped job,Leak,Medium,https://developer.android.com/jetpack/compose/side-effects#remembercoroutinescope,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+49,Interop,Interop View carefully,Use AndroidView,Isolated usage,Mix everywhere,Safe interop,Messy UI,Low,https://developer.android.com/jetpack/compose/interop,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+50,Interop,Avoid legacy patterns,No LiveData in UI,StateFlow,LiveData,Modern stack,Legacy debt,Medium,,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+51,Debug,Use layout inspector,Inspect recomposition,Tools,Blind debug,Fast debug,Guessing,Low,https://developer.android.com/studio/debug/layout-inspector,jetpack-compose 1.11.4 (current stable),active,2026-08-13
+52,Debug,Enable recomposition counts,Track recomposition,Debug flags,Ignore,Performance aware,Hidden jank,Low,,jetpack-compose 1.11.4 (current stable),active,2026-08-13

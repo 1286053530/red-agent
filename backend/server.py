@@ -60,7 +60,7 @@ def create_app(assets, data_dir, desktop_token="", workspace=None, browser=None)
                 if request.method == "POST":
                     if not request.headers.get("content-type", "").startswith("application/json"):
                         raise AppError("请使用 JSON 请求。", 415)
-                    image_message = len(segments) == 3 and segments[0] == "sessions" and segments[2] in {"run", "resume"}
+                    image_message = len(segments) == 3 and segments[0] == "sessions" and segments[2] in {"run", "resume", "supplement"}
                     limit = IMAGE_REQUEST_BYTES if image_message else 1000000
                     raw = bytearray()
                     async for chunk in request.stream():

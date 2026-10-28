@@ -1,0 +1,57 @@
+# 上游路径与本地参考页
+按用途选择；同一文档分片依次读取，拼接后为原文。原文中的相对路径请在此索引查找，不要猜测本地路径。
+
+- `skills/diagram-design/SKILL.md` → `references/000-skill-01.md`, `references/000-skill-02.md`, `references/000-skill-03.md`, `references/000-skill-04.md`
+- `skills/diagram-design/assets/example-architecture-containment.html` → `references/001-example-architecture-containment-01.md`, `references/001-example-architecture-containment-02.md`
+- `skills/diagram-design/assets/example-architecture-delta.html` → `references/002-example-architecture-delta-01.md`, `references/002-example-architecture-delta-02.md`, `references/002-example-architecture-delta-03.md`
+- `skills/diagram-design/assets/example-architecture.html` → `references/003-example-architecture-01.md`, `references/003-example-architecture-02.md`
+- `skills/diagram-design/assets/example-axonometric-plan-campus.html` → `references/004-example-axonometric-plan-campus-01.md`, `references/004-example-axonometric-plan-campus-02.md`, `references/004-example-axonometric-plan-campus-03.md`, `references/004-example-axonometric-plan-campus-04.md`
+- `skills/diagram-design/assets/example-axonometric-plan-coffee-shop.html` → `references/005-example-axonometric-plan-coffee-shop-01.md`, `references/005-example-axonometric-plan-coffee-shop-02.md`, `references/005-example-axonometric-plan-coffee-shop-03.md`, `references/005-example-axonometric-plan-coffee-shop-04.md`, `references/005-example-axonometric-plan-coffee-shop-05.md`
+- `skills/diagram-design/assets/example-axonometric-plan-warehouse.html` → `references/006-example-axonometric-plan-warehouse-01.md`, `references/006-example-axonometric-plan-warehouse-02.md`, `references/006-example-axonometric-plan-warehouse-03.md`, `references/006-example-axonometric-plan-warehouse-04.md`, `references/006-example-axonometric-plan-warehouse-05.md`
+- `skills/diagram-design/assets/example-axonometric-plan.html` → `references/007-example-axonometric-plan-01.md`, `references/007-example-axonometric-plan-02.md`, `references/007-example-axonometric-plan-03.md`, `references/007-example-axonometric-plan-04.md`
+- `skills/diagram-design/assets/example-bar.html` → `references/008-example-bar-01.md`
+- `skills/diagram-design/assets/example-beeswarm.html` → `references/009-example-beeswarm-01.md`, `references/009-example-beeswarm-02.md`, `references/009-example-beeswarm-03.md`, `references/009-example-beeswarm-04.md`
+- `skills/diagram-design/assets/example-box-plot.html` → `references/010-example-box-plot-01.md`, `references/010-example-box-plot-02.md`
+- `skills/diagram-design/assets/example-bubble.html` → `references/011-example-bubble-01.md`, `references/011-example-bubble-02.md`
+- `skills/diagram-design/assets/example-bump.html` → `references/012-example-bump-01.md`, `references/012-example-bump-02.md`
+- `skills/diagram-design/assets/example-data-flow.html` → `references/013-example-data-flow-01.md`, `references/013-example-data-flow-02.md`
+- `skills/diagram-design/assets/example-datalake.html` → `references/014-example-datalake-01.md`, `references/014-example-datalake-02.md`, `references/014-example-datalake-03.md`
+- `skills/diagram-design/assets/example-db-schema.html` → `references/015-example-db-schema-01.md`, `references/015-example-db-schema-02.md`, `references/015-example-db-schema-03.md`
+- `skills/diagram-design/assets/example-dependency.html` → `references/016-example-dependency-01.md`, `references/016-example-dependency-02.md`
+- `skills/diagram-design/assets/example-deployment.html` → `references/017-example-deployment-01.md`, `references/017-example-deployment-02.md`
+- `skills/diagram-design/assets/example-dp-integration.html` → `references/018-example-dp-integration-01.md`, `references/018-example-dp-integration-02.md`
+- `skills/diagram-design/assets/example-dp-security-matrix.html` → `references/019-example-dp-security-matrix-01.md`, `references/019-example-dp-security-matrix-02.md`
+- `skills/diagram-design/assets/example-er.html` → `references/020-example-er-01.md`, `references/020-example-er-02.md`
+- `skills/diagram-design/assets/example-exploded-ai-stack.html` → `references/021-example-exploded-ai-stack-01.md`, `references/021-example-exploded-ai-stack-02.md`, `references/021-example-exploded-ai-stack-03.md`, `references/021-example-exploded-ai-stack-04.md`, `references/021-example-exploded-ai-stack-05.md`
+- `skills/diagram-design/assets/example-exploded-keyboard.html` → `references/022-example-exploded-keyboard-01.md`, `references/022-example-exploded-keyboard-02.md`, `references/022-example-exploded-keyboard-03.md`, `references/022-example-exploded-keyboard-04.md`, `references/022-example-exploded-keyboard-05.md`, `references/022-example-exploded-keyboard-06.md`, `references/022-example-exploded-keyboard-07.md`, `references/022-example-exploded-keyboard-08.md`, `references/022-example-exploded-keyboard-09.md`, `references/022-example-exploded-keyboard-10.md`, `references/022-example-exploded-keyboard-11.md`, `references/022-example-exploded-keyboard-12.md`, `references/022-example-exploded-keyboard-13.md`, `references/022-example-exploded-keyboard-14.md`, `references/022-example-exploded-keyboard-15.md`, `references/022-example-exploded-keyboard-16.md`, `references/022-example-exploded-keyboard-17.md`, `references/022-example-exploded-keyboard-18.md`, `references/022-example-exploded-keyboard-19.md`, `references/022-example-exploded-keyboard-20.md`, `references/022-example-exploded-keyboard-21.md`
+- `skills/diagram-design/assets/example-exploded-phone.html` → `references/023-example-exploded-phone-01.md`, `references/023-example-exploded-phone-02.md`, `references/023-example-exploded-phone-03.md`
+- `skills/diagram-design/assets/example-exploded-unboxing.html` → `references/024-example-exploded-unboxing-01.md`, `references/024-example-exploded-unboxing-02.md`
+- `skills/diagram-design/assets/example-exploded.html` → `references/025-example-exploded-01.md`
+- `skills/diagram-design/assets/example-fishbone.html` → `references/026-example-fishbone-01.md`
+- `skills/diagram-design/assets/example-flowchart.html` → `references/027-example-flowchart-01.md`
+- `skills/diagram-design/assets/example-gantt.html` → `references/028-example-gantt-01.md`, `references/028-example-gantt-02.md`
+- `skills/diagram-design/assets/example-heatmap.html` → `references/029-example-heatmap-01.md`, `references/029-example-heatmap-02.md`
+- `skills/diagram-design/assets/example-high-level-vertical.html` → `references/030-example-high-level-vertical-01.md`, `references/030-example-high-level-vertical-02.md`, `references/030-example-high-level-vertical-03.md`, `references/030-example-high-level-vertical-04.md`
+- `skills/diagram-design/assets/example-high-level.html` → `references/031-example-high-level-01.md`, `references/031-example-high-level-02.md`, `references/031-example-high-level-03.md`
+- `skills/diagram-design/assets/example-import-drawio.html` → `references/032-example-import-drawio-01.md`, `references/032-example-import-drawio-02.md`
+- `skills/diagram-design/assets/example-import-excalidraw.html` → `references/033-example-import-excalidraw-01.md`
+- `skills/diagram-design/assets/example-import-mermaid.html` → `references/034-example-import-mermaid-01.md`
+- `skills/diagram-design/assets/example-it-state.html` → `references/035-example-it-state-01.md`, `references/035-example-it-state-02.md`
+- `skills/diagram-design/assets/example-journey.html` → `references/036-example-journey-01.md`
+- `skills/diagram-design/assets/example-kanban.html` → `references/037-example-kanban-01.md`, `references/037-example-kanban-02.md`
+- `skills/diagram-design/assets/example-layers.html` → `references/038-example-layers-01.md`
+- `skills/diagram-design/assets/example-line.html` → `references/039-example-line-01.md`
+- `skills/diagram-design/assets/example-loop-terminal.html` → `references/040-example-loop-terminal-01.md`, `references/040-example-loop-terminal-02.md`
+- `skills/diagram-design/assets/example-loop.html` → `references/041-example-loop-01.md`
+- `skills/diagram-design/assets/example-marimekko.html` → `references/042-example-marimekko-01.md`, `references/042-example-marimekko-02.md`
+- `skills/diagram-design/assets/example-medallion.html` → `references/043-example-medallion-01.md`, `references/043-example-medallion-02.md`
+- `skills/diagram-design/assets/example-nested.html` → `references/044-example-nested-01.md`
+- `skills/diagram-design/assets/example-org-chart.html` → `references/045-example-org-chart-01.md`, `references/045-example-org-chart-02.md`
+- `skills/diagram-design/assets/example-polar.html` → `references/046-example-polar-01.md`, `references/046-example-polar-02.md`
+- `skills/diagram-design/assets/example-process.html` → `references/047-example-process-01.md`, `references/047-example-process-02.md`
+- `skills/diagram-design/assets/example-pyramid.html` → `references/048-example-pyramid-01.md`
+- `skills/diagram-design/assets/example-quadrant-consultant.html` → `references/049-example-quadrant-consultant-01.md`, `references/049-example-quadrant-consultant-02.md`
+- `skills/diagram-design/assets/example-quadrant.html` → `references/050-example-quadrant-01.md`
+- `skills/diagram-design/assets/example-radar.html` → `references/051-example-radar-01.md`
+- `skills/diagram-design/assets/example-ridgeline.html` → `references/052-example-ridgeline-01.md`, `references/052-example-ridgeline-02.md`
+- `skills/diagram-design/assets/example-sankey.html` → `references/053-example-sankey-01.md`

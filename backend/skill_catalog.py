@@ -11,7 +11,7 @@ DEFAULT_SKILL = "software-development"
 # Routing uses the user's goal only; source files and model output cannot change it.
 WORKFLOW_PATTERNS = {
     "code-review": r"审查|审阅|评审|复核|\b(?:review|audit)\b",
-    "code-analysis": r"分析|梳理|阅读|查看|检查|解释|定位|排查|诊断|\b(?:inspect|analy[sz]e|analysis|explain|investigate)\b",
+    "code-analysis": r"分析|梳理|阅读|浏览|查看|检查|解释|总结|概述|定位|排查|诊断|\b(?:inspect|analy[sz]e|analysis|explain|investigate|browse|read|summari[sz]e|overview|describe)\b",
     "bug-fix": r"修复|修正|纠正|改正|\b(?:fix|repair|debug)\b",
     "feature-development": r"新增|添加|增加|实现|开发|接入|\b(?:add|implement|create|build|develop)\b",
     "refactoring": r"重构|整理代码|\brefactor\b",
@@ -32,7 +32,7 @@ def task_workflow(goal, kind=None):
     # "Review the bug fix" describes a review; "review and fix" requests a change.
     read_request = first_read and (not first_change or (
         first_read[1].start() < first_change[1].start()
-        and not re.search(r"并|然后|接着|同时|再|[,，;；]|\b(?:and|then|also)\b", goal[first_read[1].end():first_change[1].start()], re.I)))
+        and not re.search(r"并|后|接着|同时|再|[,，;；]|\b(?:and|then|also|after)\b", goal[first_read[1].end():first_change[1].start()], re.I)))
     if kind == "inspect" or kind != "change" and read_request:
         return "code-review" if matches["code-review"] else "code-analysis"
     for key in ("bug-fix", "feature-development", "refactoring", "general-development"):
@@ -54,11 +54,18 @@ class SkillCatalog:
     def list(self):
         return copy.deepcopy(list(self.entries.values()))
 
-    def snapshot(self, skill_id=DEFAULT_SKILL, *, goal=None, kind=None):
-        if skill_id == "none":
-            return None
+    def validate_selection(self, skill_id=DEFAULT_SKILL):
+        if isinstance(skill_id, str) and skill_id in {"auto", "none"}:
+            return
         if not isinstance(skill_id, str) or skill_id not in self.entries:
             raise AppError("内置 Skill 不存在，请刷新后重新选择。", 400)
+
+    def snapshot(self, skill_id=DEFAULT_SKILL, *, goal=None, kind=None):
+        self.validate_selection(skill_id)
+        if skill_id == "none":
+            return None
+        if skill_id == "auto":
+            raise AppError("自动模式需要先由模型选择具体 Skill。")
         entry = self.entries[skill_id]
         folder = self.root / skill_id
         root = folder.resolve(strict=True)

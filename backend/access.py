@@ -3,10 +3,10 @@ from .common import AppError
 
 
 ACCESS_POLICY = {
-    "version": 1,
+    "version": 2,
     "directories": "文件工具仅访问导入项目内的源码；禁止越界、符号链接/目录联接、敏感路径和工作台数据目录。",
-    "commands": "允许 Node --test/--check、npm test/run test/build/lint/typecheck/check、受控 Python 检查与项目脚本；不提供任意 shell、安装或发布工具。npm 会执行对应的 pre/post 生命周期脚本。",
-    "network": "任务内容、用户添加的图片、已读源码和命令输出会发送到所选模型接口；没有通用联网工具。项目检查进程的联网未隔离，可能访问任意地址。",
+    "commands": "本地仅允许受控 Node/npm/Python 项目检查；配置 SSH 主机并为本次修改任务单独授权后，可在固定主机执行远程命令并上传项目文件。",
+    "network": "任务内容、图片、源码和命令输出发送到所选模型接口；SSH 仅连接本任务固定的主机。项目检查进程的联网未隔离。",
     "sensitive": "文件工具排除 .env、密钥、凭据及 .ssh/.aws/.azure/.kube/.docker 等敏感配置；模型 API Key 仅供后端请求使用。检查进程仅继承基础环境变量，不继承后端密钥变量。",
     "process": "检查进程以本机账号运行，工作目录为导入项目；文件、网络及本机配置访问未做操作系统隔离。项目脚本可启动 shell 和子进程；自动执行仅减少审批，不扩大工具范围。",
 }

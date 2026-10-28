@@ -145,7 +145,8 @@ async def test_legacy_readonly_resume_cannot_escalate_grants(workspace):
     session['task'].pop('accessScope')
     session['task']['permissions'] = {'edits': True, 'commands': True}
     w.save()
-    loaded = Workspace(w.data_dir, model_client=w.model_client)
+    loaded = Workspace(w.data_dir, model_client=w.model_client,
+                       intent_classifier=lambda _: {"type": "development"})
     try:
         restored = loaded.session(session['id'])
         assert restored['task']['permissions'] == {'edits': False, 'commands': False}

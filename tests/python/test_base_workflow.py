@@ -3,7 +3,8 @@ import json
 import httpx
 import pytest
 
-from backend.workspace import SYSTEM, task_kind
+from backend.common import now
+from backend.workspace import SYSTEM, Workspace, task_kind
 from conftest import ROOT, prepare, settle, tool_call
 
 
@@ -15,6 +16,12 @@ from conftest import ROOT, prepare, settle, tool_call
     ("实现查询功能", None, "change"),
     ("审查代码", "change", "change"),
     ("分析并修复", "inspect", "inspect"),
+    ("请先浏览项目文件，总结项目结构、使用的技术栈和主要入口文件。", "auto", "inspect"),
+    ("总结项目结构和技术栈", None, "inspect"),
+    ("Browse the project and summarize its structure and entry points", None, "inspect"),
+    ("Read the project and implement a login page", None, "change"),
+    ("浏览项目，然后修改登录页", "auto", "change"),
+    ("总结项目后添加导出功能", "auto", "change"),
 ])
 def test_task_kind_respects_explicit_mode_and_routes_reviews(message, requested, expected):
     assert task_kind(message, requested) == expected
@@ -92,13 +99,31 @@ async def test_long_review_is_prompted_to_deliver_existing_evidence(workspace):
     assert count == 11
 
 
-async def test_legacy_review_can_resume_as_read_only_without_restarting(workspace):
+@pytest.mark.parametrize("requested", [None, "auto"])
+async def test_legacy_review_can_resume_as_read_only_without_restarting(workspace, requested):
     w, _, provider, s = workspace
-    await prepare(w, provider, s, message="审查代码", kind="change")
-    s["task"].pop("requestedKind")
+    await prepare(w, provider, s, message="请先浏览项目文件，总结项目结构、使用的技术栈和主要入口文件。", kind="change")
+    if requested is None:
+        s["task"].pop("requestedKind")
+    else:
+        s["task"]["requestedKind"] = requested
     await w.execute(s, "update_plan", {"summary": "审查", "criteria": "证据", "next_action": "交付"})
     await w.execute(s, "read_file", {"path": "app.mjs"})
+    task_id = s["task"]["id"]
+    observations = dict(s["observations"])
+    if requested == "auto":
+        w.save()
+        w = Workspace(w.data_dir)
+        s = w.session(s["id"])
     async def handler(request):
+        body = json.loads(request.content)
+        if "tools" not in body:
+            return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({
+                "type": "development", "kind": "inspect", "tasks": ["总结项目结构"], "tools": ["read_file", "finish_task"]
+            }, ensure_ascii=False)}}]})
+        assert '"kind":"inspect"' in body["messages"][1]["content"]
+        assert "Task workflow: code-analysis" in body["messages"][0]["content"]
+        assert "系统已纠正自动任务分类" in str(body["messages"])
         return httpx.Response(200, json={"choices": [{"message": {"tool_calls": [tool_call("finish_task", {
             "summary": "加法实现错误 — app.mjs:1", "evidence": "a-b，静态审查未执行"})]}}]})
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
@@ -107,3 +132,29 @@ async def test_legacy_review_can_resume_as_read_only_without_restarting(workspac
         await settle(w)
     assert s["status"] == "completed", s["error"]
     assert s["task"]["kind"] == "inspect"
+    assert s["task"]["id"] == task_id
+    assert s["observations"] == observations
+    assert s["task"]["permissions"] == {"edits": False, "commands": False}
+    assert s["task"]["outcome"]["code"] == "static_review"
+    assert not s["changes"] and not s["commands"]
+    if requested == "auto":
+        await w.shutdown()
+
+
+@pytest.mark.parametrize("barrier", ["explicit_change", "supplement_change", "feedback_change"])
+async def test_auto_inspection_recovery_preserves_requested_changes(workspace, barrier):
+    w, _, provider, s = workspace
+    await prepare(w, provider, s, message="浏览项目，总结入口文件", kind="change")
+    if barrier != "explicit_change":
+        s["task"]["requestedKind"] = "auto"
+    if barrier == "supplement_change":
+        s["task"]["supplements"] = [{"status": "included", "content": "然后修复登录错误", "includedAt": now()}]
+    async def handler(request):
+        return httpx.Response(200, json={"choices": [{"message": {"tool_calls": [tool_call("request_user", {
+            "question": "确认修改范围？", "reason": "保留修改任务的完成检查"})]}}]})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        w.model_client = client
+        await w.resume_run(s["id"], {"feedback": "然后添加登录页"} if barrier == "feedback_change" else {})
+        await settle(w)
+    assert s["status"] == "awaiting_user", s["error"]
+    assert s["task"]["kind"] == "change"

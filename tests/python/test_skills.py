@@ -128,7 +128,8 @@ async def test_skill_snapshot_survives_restart_catalog_changes_and_history_compa
         observed.append(json.loads(request.content))
         return httpx.Response(200, json={"choices": [{"message": {"content": "need more input"}}]})
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-        restored = Workspace(w.data_dir, model_client=client, skill_catalog=SkillCatalog(root))
+        restored = Workspace(w.data_dir, model_client=client, skill_catalog=SkillCatalog(root),
+                             intent_classifier=lambda _: {"type": "development"})
         try:
             await restored.resume_run(s["id"], {'feedback': '继续核对代码审查证据'})
             await settle(restored)
@@ -175,7 +176,8 @@ async def test_explicit_opt_out_and_unknown_skill_do_not_change_task_state(works
         await w.execute(s, "read_skill_resource", {"path": "references/python.md"})
     # Legacy tasks without a snapshot are not silently changed during resume.
     w.save()
-    restored = Workspace(w.data_dir, model_client=w.model_client)
+    restored = Workspace(w.data_dir, model_client=w.model_client,
+                         intent_classifier=lambda _: {"type": "development"})
     try:
         await restored.resume_run(s["id"])
         await settle(restored)
@@ -201,12 +203,23 @@ async def test_skill_catalog_api_and_frontend_controls(live_server):
             page = await browser.new_page(viewport={"width": 1550, "height": 1100})
             await page.goto(origin + "/#developer")
             await page.evaluate("showView('developer')")
-            await page.wait_for_function("document.querySelector('#devSkillSelect').options.length===2")
-            assert await page.locator("#devSkillSelect").input_value() == "software-development"
+            await page.wait_for_function("document.querySelector('#devSkillSelect').options.length===13")
+            assert await page.locator("#devSkillSelect").input_value() == "auto"
             assert not await page.locator(".dev-agent-info").is_visible()
             assert not await page.locator("#devSkillSelect").is_visible()
             assert not await page.locator("#devViewSkill").is_visible()
             assert not await page.locator("#devSkillDetails").is_visible()
+            await page.locator('#devModelPicker > summary').click()
+            assert await page.locator('#devSkillSelect').is_visible()
+            await page.locator('#devViewSkill').click()
+            assert await page.locator('#devSkillContent').is_visible()
+            assert 'humanizer' in await page.locator('#devSkillContent').inner_text()
+            await page.locator('#devSkillSelect').select_option('humanizer')
+            await page.locator('#devViewSkill').click()
+            await page.wait_for_function("document.querySelector('#devSkillContent').textContent.includes('Humanizer 自然表达')")
+            await page.locator('#devSkillSelect').select_option('none')
+            assert await page.locator('#devViewSkill').is_disabled()
+            await page.locator('#devSkillSelect').select_option('auto')
             folder = ROOT / ".local/skill-check"
             folder.mkdir(parents=True, exist_ok=True)
             await page.screenshot(path=str(folder / "developer-skills.png"))

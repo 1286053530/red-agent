@@ -159,6 +159,39 @@ async def test_model_service_error_is_failure_not_user_question(workspace):
     assert '503' in session['error'] and not session['task']['outcome'].get('question')
 
 
+async def test_gateway_retry_continues_task_without_repeating_tools(workspace, monkeypatch):
+    from backend import model
+    monkeypatch.setattr(model, 'MODEL_RETRY_DELAYS', (0, 0, 0, 0))
+    w, _, provider, session = workspace
+    attempts = 0
+    interrupted_requests = []
+
+    async def handler(request):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            name, args = 'update_plan', PLAN
+        elif attempts == 2:
+            name, args = 'read_file', {'path': 'app.mjs'}
+        else:
+            interrupted_requests.append(request.content)
+            if attempts in {3, 4}:
+                return httpx.Response(502, text='Bad Gateway')
+            name, args = 'finish_task', FINISH
+        return httpx.Response(200, json={'choices': [{'message': {'tool_calls': [tool_call(name, args)]}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        w.model_client = client
+        await w.start_run(session['id'], {'providerId': provider['id'], 'message': '审查代码'})
+        await settle(w)
+    assert session['status'] == 'completed', session['error']
+    assert attempts == 5 and session['task']['rounds'] == 3
+    assert [event['name'] for event in session['events']] == ['update_plan', 'read_file', 'finish_task']
+    assert len(interrupted_requests) == 3 and len(set(interrupted_requests)) == 1
+    assert session['task']['outcome']['code'] == 'static_review'
+    assert session['observations']['app.mjs']['ranges']
+
+
 async def test_external_file_change_invalidates_duplicate_read_guard(workspace):
     w, project, provider, session = workspace
     count = 0
@@ -259,6 +292,7 @@ async def test_waiting_ui_answers_without_creating_new_task(live_server, workspa
                 await page.get_by_role('button', name='回答并继续', exact=True).click()
                 await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='已完成'")
                 assert session['task']['id'] == task_id and not session.get('tasks')
+                assert session['task']['kind'] == 'inspect'
                 assert await page.locator('#devTaskOutcome').count() == 0
                 steps.append(('fail_task', {'reason': '无法完成所需验证', 'evidence': '没有成功的行为测试'}))
                 await page.fill('#devPrompt', '审查另一项内容')

@@ -1,4 +1,4 @@
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, expect
 
 from conftest import ROOT
 
@@ -38,7 +38,11 @@ async def test_sidebar_resize_and_scroll(live_server, workspace):
             await groups.hover()
             await page.mouse.wheel(0, 700)
             await page.wait_for_function('document.querySelector("#devProjectGroups").scrollTop > 0')
-            assert await page.locator('#devNewSessionButton').is_visible()
+            assert await page.locator('#devSessionCount').is_visible()
+            await groups.evaluate('el => el.scrollTop = 0')
+            create = page.locator(f'[data-new-session-project="{project["id"]}"]')
+            await create.scroll_into_view_if_needed()
+            assert await create.is_visible()
             output = ROOT / '.local/sidebar-check'
             output.mkdir(parents=True, exist_ok=True)
             await page.screenshot(path=str(output / 'resizable.png'))
@@ -123,6 +127,12 @@ async def test_sidebar_switches_projects_sessions_and_source(live_server, worksp
             await page.locator('[data-file-path="app.mjs"]').wait_for()
             assert await page.locator("#devFileType").inner_text() == "SOURCE"
             assert "second project" not in await page.locator("#devFilePreview").inner_text()
+            create = page.locator(".dev-project-header #devNewSessionButton")
+            await expect(create).to_have_attribute("title", "创建新会话")
+            await expect(create).to_have_attribute("aria-label", "创建新会话")
+            await expect(create).to_have_text("")
+            await expect(create.locator("svg")).to_have_count(1)
+            await expect(page.locator(".dev-project-sidebar-footer button")).to_have_count(0)
             await page.locator("#devNewSessionButton").click()
             await page.wait_for_function("document.querySelectorAll('.dev-project-sessions .dev-session-item').length===3")
             assert await page.locator("#devSessionCount").inner_text() == "2 个会话"
@@ -139,6 +149,18 @@ async def test_sidebar_switches_projects_sessions_and_source(live_server, worksp
             await page.wait_for_function("!document.querySelector('#devPrompt').disabled")
             assert await page.locator("#devConversationTitle").inner_text() == "新开发会话"
             assert await page.locator(".dev-archived-sessions").count() == 0
+            # Each project's plus creates in that project, including collapsed, inactive projects.
+            await page.locator(f'[data-project-id="{second["id"]}"]').click()
+            await page.locator(f'[data-project-id="{second["id"]}"]').click()
+            await page.locator(f'[data-session-id="{first_session["id"]}"]').click()
+            await page.locator(f'[data-new-session-project="{second["id"]}"]').click()
+            await expect(page.locator("#devNewSessionButton")).to_be_enabled()
+            await expect(page.locator("#devAgentProjectName")).to_have_text("second-project")
+            await expect(page.locator("#devSessionCount")).to_have_text("2 个会话")
+            new_id = await page.evaluate("localStorage.getItem('devSession')")
+            assert new_id != second_session["id"] and w.session(new_id)["projectId"] == second["id"]
+            await expect(page.locator(f'[data-session-id="{new_id}"]')).to_be_visible()
+            assert len(w.data["sessions"]) == 4
             await page.locator('.activity-rail [data-view="account"]').click()
             assert await page.locator('.activity-rail [data-view="account"]').get_attribute("aria-pressed") == "true"
             await page.locator('.activity-rail [data-view="developer"]').click()

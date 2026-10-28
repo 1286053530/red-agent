@@ -15,18 +15,23 @@ body.sidebar-collapsed .app-content{margin-left:0!important;width:100%!important
 .dev-project-sidebar-heading{display:flex;align-items:center;justify-content:space-between;padding:0 8px 8px;color:#78869c;font-size:12px}
 .dev-project-groups{flex:1;min-height:0;overflow:auto;padding:0 2px}
 .dev-project-group{margin:4px 0 12px}
-.dev-project-row{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;border-radius:6px;padding:8px;color:#52617a;text-align:left;font-size:12px}
+.dev-project-header{display:flex;align-items:center;gap:2px}
+.dev-project-row{display:flex;flex:1;min-width:0;align-items:center;gap:8px;border:0;background:transparent;border-radius:6px;padding:8px;color:#52617a;text-align:left;font-size:12px}
 .dev-project-row:hover,.dev-project-row.active{background:#f0f4fc;color:#315deb}
 .dev-project-row .icon{width:15px;height:15px;flex-shrink:0}
 .dev-project-row>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dev-project-row small{margin-left:auto;color:#a3adbc}
+.dev-project-row small{margin-left:auto;flex-shrink:0;color:#a3adbc}
+.dev-project-new-session{display:flex;flex-shrink:0;align-items:center;justify-content:center;width:28px;height:28px;padding:5px;border:0;border-radius:6px;background:transparent;color:#78869c;cursor:pointer}
+.dev-project-new-session .icon{width:16px;height:16px}
+.dev-project-new-session:hover{background:#f0f4fc;color:#315deb}
+.dev-project-new-session:focus-visible{outline:2px solid #315deb;outline-offset:1px}
+.dev-project-new-session:disabled{opacity:.4;cursor:default}
 .dev-project-sessions{padding-left:20px}
 .dev-project-sessions .dev-session-item{padding:8px 6px}
 .dev-project-sessions .dev-session-copy strong{font-size:11px;font-weight:400}
 .dev-project-no-sessions{padding:6px;color:#a5afbd;font-size:11px}
 .dev-project-sidebar-footer{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px;padding:8px 4px;border-top:1px solid #edf0f5;color:#9aa6b7;font-size:10px}
 .dev-project-sidebar-footer #devProjectMeta{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-body[data-view="developer"] .sidebar-lower{padding-top:12px}
 .leisure-nav{border-top:1px solid #edf0f5;padding-top:10px}
 .leisure-nav .nav-item{height:34px;margin-bottom:3px;font-size:11px}
 .leisure-nav .nav-caption{margin:3px 8px 9px;font-size:10px;letter-spacing:.4px}
@@ -39,9 +44,6 @@ body[data-view="developer"] .sidebar .brand{flex-shrink:0}
   body[data-view="developer"] .main-nav{display:flex;flex-shrink:0;gap:8px;padding-top:10px}
   body[data-view="developer"] .main-nav .nav-item{flex:1;margin:0;height:36px}
   body[data-view="developer"] .dev-project-sidebar{min-height:180px;margin-top:8px}
-  body[data-view="developer"] .sidebar-lower{display:block;flex-shrink:0;padding-top:6px}
-  body[data-view="developer"] .sidebar-lower .profile{display:none}
-  body[data-view="developer"] .sidebar-lower .main-nav{padding:6px 10px;border-top:1px solid #edf0f5}
 }
 #developerView{padding:0 0 24px;min-width:0}
 body[data-view="developer"] .insight-rail{display:none}
@@ -75,6 +77,7 @@ body[data-view="developer"] .main-content{padding-bottom:24px}
 .dev-task-options label:not(.dev-permission) { flex-wrap: wrap; }
 .dev-task-options select, .dev-task-options input:not([type=checkbox]) { min-width: 0; flex: 1; border: 1px solid #dce3df; border-radius: 6px; padding: 7px; background: #fff; color: #273f34; }
 .dev-task-options small { display: block; line-height: 1.7; }
+.dev-remote-section{margin-top:20px;padding-top:16px;border-top:1px solid #e6ebf3}.dev-remote-section h3{margin:0 0 5px;font-size:15px;color:#455b7d}.dev-remote-section p,.dev-remote-section>small{display:block;margin:0 0 10px;color:#7385a0;font-size:12px;line-height:1.6}.dev-remote-section .dev-provider-form{border-top:0;padding-top:4px}.dev-remote-section input{width:100%}.dev-remote-section .dev-provider-actions{flex-wrap:wrap}
 .dev-execution { flex: 0 1 auto; min-height: 0; max-height: 310px; overflow: auto; border-top: 1px solid #e4e9e6; background: #f6f8f7; font-size: 11px; overflow-wrap: anywhere; }
 .dev-execution:empty { display: none; }
 #devTaskAccess { margin: 8px 14px; }
@@ -98,3 +101,52 @@ body[data-view="developer"] .main-content{padding-bottom:24px}
 .dev-applied-changes>summary { margin: 8px 14px; color: #5c7768; font-size: 12px; }
 .dev-change-stats{display:flex;justify-content:space-between;gap:8px;color:#8795aa;font-size:10px}.dev-diff-view{max-height:340px;overflow:auto;border:1px solid #e8edf4;border-radius:5px;background:#fbfcfe}.dev-diff-summary{position:sticky;top:0;display:flex;gap:12px;padding:6px 8px;background:#f1f4f9;border-bottom:1px solid #e5eaf1;color:#77869d;font-size:10px}.dev-diff-summary span:first-child{color:#b65e69}.dev-diff-summary span:nth-child(2){color:#43896e}.dev-diff-code{margin:0!important;padding:7px!important;max-height:none!important;white-space:pre!important;font:11px/1.55 Consolas,monospace!important}.dev-diff-code span{display:block;min-height:1.55em}.dev-diff-code .added{background:#e9f7ee;color:#26734f}.dev-diff-code .removed{background:#fff0f0;color:#a94350}.dev-diff-code .meta{color:#7888a1;background:#f3f5f9}.dev-diff-too-large,.dev-diff-error{padding:8px;color:#8c6f51;font-size:11px}
 .dev-skill-bar{display:flex;align-items:center;gap:8px;padding:9px 15px;border-bottom:1px solid #e8ecf3;font-size:11px;color:#65738c}.dev-skill-bar select{flex:1;min-width:0;border:1px solid #dfe5ef;border-radius:5px;padding:6px;background:#fff;color:#40516d}.dev-skill-bar button{background:none;border:0;color:#4669b0;cursor:pointer}.dev-skill-details{padding:9px 15px;border-bottom:1px solid #e8ecf3;font-size:11px;color:#7a879b}.dev-skill-details summary{cursor:pointer}.dev-skill-details p{line-height:1.8;margin:8px 0}.dev-skill-details pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;background:#f6f8fc;padding:10px;line-height:1.7;color:#43516a}.dev-active-skill{font-size:11px;color:#536c9d;line-height:1.8;margin:8px 0}
+
+/* Completed task delivery */
+.dev-result-card{width:100%;color:#292b30;overflow-wrap:anywhere}
+.dev-result-summary{margin-bottom:14px}
+.dev-result-topics{display:grid;gap:12px;list-style:none;padding:0;margin:0}
+.dev-result-topic{min-width:0;border:1px solid #e5e9f0;border-radius:12px;padding:16px;background:#fff}
+.dev-result-topic-heading{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.dev-result-number{display:grid;place-items:center;flex-shrink:0;width:25px;height:25px;background:#eef3ff;border-radius:7px;color:#315deb;font-size:12px;font-weight:600;line-height:1}
+.dev-result-topic-heading h4{margin:0;font-size:14px;line-height:25px;font-weight:600;color:#29364d}
+.dev-result-topic-body{color:#505b6d;line-height:1.75;font-weight:400}
+.dev-result-topic-body p{margin:0 0 8px}
+.dev-result-topic-body p:last-child{margin-bottom:0}
+.dev-result-topic-body ul{padding-left:19px;margin:0}
+.dev-result-topic-body li+li{margin-top:7px}
+.dev-result-topic-body pre{max-width:100%;overflow:auto;white-space:pre-wrap}
+.dev-result-note{margin:12px 0 0;color:#8a8d93;font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+.dev-result-warning{margin:8px 0}
+.dev-result-card .dev-result-warning,.dev-result-warning{color:#996324}
+.dev-result-files{margin-top:16px;border:1px solid #e5e5e8;border-radius:14px;overflow:hidden;background:#fff}
+.dev-result-files-head{display:flex;align-items:center;gap:12px;padding:16px}
+.dev-result-file-icon{display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;border-radius:11px;background:#f6f6f7;color:#727479}
+.dev-result-file-icon .icon{width:23px;height:23px}
+.dev-result-files-title{min-width:0;line-height:1.6}
+.dev-result-files-title strong{font-size:13px;font-weight:600}
+.dev-result-stats{display:flex;flex-shrink:0;gap:6px;font-size:12px;font-variant-numeric:tabular-nums}
+.dev-result-stats .added{color:#009e42}.dev-result-stats .removed{color:#d42929}
+.dev-result-file-actions{display:flex;align-items:center;flex-shrink:0;gap:8px;margin-left:auto}
+.dev-result-card button{font:inherit;cursor:pointer;color:#303237;background:transparent;border:0;border-radius:8px;padding:5px 8px}
+.dev-result-card button:hover{background:#f3f3f5}
+.dev-result-card button.dev-result-view{border:1px solid #e9e9ec;border-radius:18px;padding:5px 12px}
+.dev-result-file{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-top:1px solid #f0f0f2}
+.dev-result-file:nth-child(odd){background:#f8f8fa}
+.dev-result-file>span:first-child{min-width:0;overflow-wrap:anywhere;color:#606268}
+.dev-result-more-files>summary{padding:8px 16px;border-top:1px solid #f0f0f2;cursor:pointer;color:#777a80}
+.dev-result-records{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 16px;margin-top:10px;color:#8a8d93;font-size:11px}
+.dev-result-records:has(details[open]){display:block}
+.dev-result-records button{color:inherit;padding:0}
+.dev-result-card button:focus-visible,.dev-result-card summary:focus-visible{outline:2px solid #315deb;outline-offset:3px}
+.dev-result-checks{max-width:100%}
+.dev-result-checks>summary{cursor:pointer}
+.dev-result-checks article{margin-top:10px;padding:10px;background:#f7f9fc;border-radius:6px;overflow-wrap:anywhere}
+.dev-result-checks article>strong,.dev-result-checks article>span{display:block}
+.dev-result-checks article>span{color:#708097;font-size:11px}
+.dev-result-checks pre{white-space:pre-wrap;max-height:240px}
+@media(max-width:600px){.dev-result-topic{padding:12px}.dev-result-files-head{flex-wrap:wrap;padding:12px;gap:8px}.dev-result-file-icon{width:34px;height:34px}.dev-result-file-actions{width:100%;justify-content:flex-end}.dev-result-file{padding:9px 12px}}
+.dev-chat-message.assistant .dev-message-content:has(.dev-result-card){width:100%;min-width:0}
+.dev-supplement-status { display: block; margin-top: 6px; color: var(--text-muted, #64748b); font-size: 12px; line-height: 1.6; }
+.dev-task-routing { font-size: 11px; line-height: 1.65; color: #536c9d; margin: 8px 0; overflow-wrap: anywhere; }
+.dev-send-button.is-supplement { width: auto; min-width: 76px; padding: 0 12px; white-space: nowrap; font-size: 12px; }

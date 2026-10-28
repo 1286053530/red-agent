@@ -7,7 +7,7 @@ import pytest
 
 from backend.common import AppError
 from backend import model
-from backend.model import call_model
+from backend.model import call_model, model_error_detail
 from backend.server import create_app
 from conftest import ROOT, tool_call
 
@@ -63,7 +63,7 @@ async def test_openai_and_anthropic_protocols_and_failures():
             {"role": "assistant", "content": "", "tool_calls": [{"id": "one", "function": {"name": "list_files", "arguments": "{}"}}]},
             {"role": "tool", "tool_call_id": "one", "content": "{}"}], client=client)
         assert result["content"] == "done"
-    for status in [401, 403, 404, 429, 500, 302]:
+    for status in [400, 401, 403, 404, 422, 429, 500, 302]:
         requests = []
         async def rejected(request):
             requests.append(request)
@@ -72,6 +72,76 @@ async def test_openai_and_anthropic_protocols_and_failures():
             with pytest.raises(AppError, match=str(status)):
                 await call_model(provider, [{"role": "user", "content": "test"}], client=client)
         assert len(requests) == 1
+
+
+async def test_model_error_detail_is_bounded_and_redacted():
+    response = httpx.Response(400, json={'error': {
+        'message': 'invalid reasoning_effort for Bearer secret-token sk-live-abc123',
+        'code': 'bad_request', 'param': 'reasoning_effort'}})
+    detail = model_error_detail(response, 'secret-token')
+    assert 'secret-token' not in detail and 'sk-live-abc123' not in detail
+    assert 'invalid reasoning_effort' in detail and 'bad_request' in detail
+    assert len(detail) <= 600
+
+
+def test_gateway_error_detail_handles_plain_text_without_html_or_credentials():
+    response = httpx.Response(502, text='upstream unavailable Bearer private-key sk-test-123',
+                              headers={'content-type': 'text/plain; charset=utf-8'})
+    detail = model_error_detail(response, 'private-key')
+    assert 'upstream unavailable' in detail
+    assert 'private-key' not in detail and 'sk-test-123' not in detail
+    for content_type in ['text/html', 'text/plain']:
+        assert not model_error_detail(httpx.Response(502, text='<html>Bad Gateway</html>',
+                                                     headers={'content-type': content_type}))
+
+
+@pytest.mark.parametrize('protocol', ['compatible', 'responses', 'anthropic'])
+@pytest.mark.parametrize('status', [502, 503, 504])
+async def test_gateway_failure_recovers_with_identical_request(monkeypatch, protocol, status):
+    monkeypatch.setattr(model, 'MODEL_RETRY_DELAYS', (0, 0, 0, 0))
+    provider = {'baseUrl': 'https://example.com/v1', 'protocol': protocol, 'model': 'fixture', 'reasoningEffort': 'high'}
+    requests = []
+
+    async def handler(request):
+        requests.append(request.content)
+        if len(requests) < 3:
+            return httpx.Response(status, json={'error': {'message': 'temporarily unavailable'}})
+        payload = {'choices': [{'message': {'content': 'recovered'}}]}
+        if protocol == 'responses':
+            payload = {'output': [{'type': 'message', 'content': [{'type': 'output_text', 'text': 'recovered'}]}]}
+        elif protocol == 'anthropic':
+            payload = {'content': [{'type': 'text', 'text': 'recovered'}]}
+        return httpx.Response(200, json=payload)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        answer = await call_model(provider, [{'role': 'user', 'content': 'continue'}], client=client)
+    assert answer['content'] == 'recovered'
+    assert len(requests) == 3 and all(body == requests[0] for body in requests)
+    body = json.loads(requests[-1])
+    assert (body.get('reasoning', {}).get('effort') if protocol == 'responses' else
+            body.get('reasoning_effort') if protocol == 'compatible' else body['thinking']['type']) == (
+                'enabled' if protocol == 'anthropic' else 'high')
+
+
+@pytest.mark.parametrize('attempts', [1, 3, 5])
+async def test_gateway_and_transport_failures_share_retry_limit(monkeypatch, attempts):
+    monkeypatch.setattr(model, 'MODEL_RETRY_DELAYS', (0, 0, 0, 0))
+    provider = {'baseUrl': 'https://example.com/v1', 'protocol': 'compatible', 'model': 'fixture', 'apiKey': 'private-key'}
+    requests = []
+
+    async def handler(request):
+        requests.append(request)
+        if len(requests) % 2 == 0:
+            raise httpx.ConnectError('offline', request=request)
+        return httpx.Response(502, json={'error': {'message': 'upstream unavailable private-key'}})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(AppError, match='HTTP 502') as error:
+            await call_model(provider, [], client=client, attempts=attempts)
+    assert len(requests) == attempts
+    assert 'upstream unavailable' in str(error.value) and 'private-key' not in str(error.value)
+    if attempts > 1:
+        assert f'已连续尝试 {attempts} 次' in str(error.value)
 
 
 @pytest.mark.parametrize("success_attempt", [3, 5])
@@ -114,7 +184,8 @@ async def test_model_connection_stops_after_five_failures(monkeypatch, error_typ
     assert attempts == 5
 
 
-async def test_model_retry_wait_can_be_stopped(monkeypatch):
+@pytest.mark.parametrize('status', [None, 502, 503, 504])
+async def test_model_retry_wait_can_be_stopped(monkeypatch, status):
     provider = {"baseUrl": "https://example.com/v1", "protocol": "compatible", "model": "fixture"}
     monkeypatch.setattr(model, "MODEL_RETRY_DELAYS", (30, 30, 30, 30))
     waiting, cancelled = asyncio.Event(), asyncio.Event()
@@ -135,6 +206,8 @@ async def test_model_retry_wait_can_be_stopped(monkeypatch):
     async def disconnected(request):
         nonlocal attempts
         attempts += 1
+        if status:
+            return httpx.Response(status)
         raise httpx.ConnectError("offline", request=request)
 
     stop = asyncio.Event()
@@ -198,10 +271,10 @@ async def test_developer_ui_uses_python_backend_and_exports_logs(workspace, live
             await page.goto(origin + "/#developer")
             await page.evaluate("showView('developer')")
             await page.locator(f'[data-project-id="{project["id"]}"]').click()
-            await page.locator("#devModelPicker summary").click()
+            await page.locator("#devModelPicker > summary").click()
             await page.select_option("#devModelSelect", provider["id"])
             await page.locator("#devPrompt").click()
-            assert await page.locator("#devSkillSelect").input_value() == "software-development"
+            assert await page.locator("#devSkillSelect").input_value() == "auto"
             await page.fill("#devPrompt", "修复加法并测试")
             await page.click("#devSendButton")
             running = page.locator(f'[data-session-id="{s["id"]}"] .dev-session-status.running')
@@ -244,7 +317,7 @@ async def test_developer_ui_uses_python_backend_and_exports_logs(workspace, live
             output = ROOT / ".local/theme-check"
             output.mkdir(parents=True, exist_ok=True)
             await page.screenshot(path=str(output / "conversation.png"))
-            await page.locator("#devModelPicker summary").click()
+            await page.locator("#devModelPicker > summary").click()
             await page.click("#devManageModel")
             assert await page.locator("#devSettingsModal").is_visible()
             await page.screenshot(path=str(output / "settings.png"))

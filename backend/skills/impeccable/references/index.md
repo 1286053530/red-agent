@@ -1,0 +1,45 @@
+# 上游路径与本地参考页
+按用途选择；同一文档分片依次读取，拼接后为原文。原文中的相对路径请在此索引查找，不要猜测本地路径。
+
+- `.agents/skills/impeccable/SKILL.md` → `references/000-skill-01.md`, `references/000-skill-02.md`
+- `.agents/skills/impeccable/reference/adapt.md` → `references/001-adapt-01.md`, `references/001-adapt-02.md`
+- `.agents/skills/impeccable/reference/adapt.native.md` → `references/002-adapt-native-01.md`
+- `.agents/skills/impeccable/reference/android.md` → `references/003-android-01.md`
+- `.agents/skills/impeccable/reference/animate.md` → `references/004-animate-01.md`
+- `.agents/skills/impeccable/reference/audit.md` → `references/005-audit-01.md`, `references/005-audit-02.md`
+- `.agents/skills/impeccable/reference/audit.native.md` → `references/006-audit-native-01.md`
+- `.agents/skills/impeccable/reference/bolder.md` → `references/007-bolder-01.md`
+- `.agents/skills/impeccable/reference/clarify.md` → `references/008-clarify-01.md`
+- `.agents/skills/impeccable/reference/colorize.md` → `references/009-colorize-01.md`
+- `.agents/skills/impeccable/reference/component-review.md` → `references/010-component-review-01.md`
+- `.agents/skills/impeccable/reference/craft-floor.md` → `references/011-craft-floor-01.md`
+- `.agents/skills/impeccable/reference/craft.md` → `references/012-craft-01.md`
+- `.agents/skills/impeccable/reference/critique.md` → `references/013-critique-01.md`, `references/013-critique-02.md`, `references/013-critique-03.md`, `references/013-critique-04.md`, `references/013-critique-05.md`, `references/013-critique-06.md`
+- `.agents/skills/impeccable/reference/delight.md` → `references/014-delight-01.md`
+- `.agents/skills/impeccable/reference/distill.md` → `references/015-distill-01.md`
+- `.agents/skills/impeccable/reference/doctor.md` → `references/016-doctor-01.md`
+- `.agents/skills/impeccable/reference/document.md` → `references/017-document-01.md`, `references/017-document-02.md`, `references/017-document-03.md`
+- `.agents/skills/impeccable/reference/extract.md` → `references/018-extract-01.md`
+- `.agents/skills/impeccable/reference/generate.md` → `references/019-generate-01.md`, `references/019-generate-02.md`
+- `.agents/skills/impeccable/reference/harden.md` → `references/020-harden-01.md`, `references/020-harden-02.md`
+- `.agents/skills/impeccable/reference/hooks.md` → `references/021-hooks-01.md`, `references/021-hooks-02.md`
+- `.agents/skills/impeccable/reference/init.md` → `references/022-init-01.md`, `references/022-init-02.md`
+- `.agents/skills/impeccable/reference/ios.md` → `references/023-ios-01.md`
+- `.agents/skills/impeccable/reference/layout.md` → `references/024-layout-01.md`
+- `.agents/skills/impeccable/reference/live-setup.md` → `references/025-live-setup-01.md`
+- `.agents/skills/impeccable/reference/live.md` → `references/026-live-01.md`, `references/026-live-02.md`, `references/026-live-03.md`, `references/026-live-04.md`
+- `.agents/skills/impeccable/reference/mode-operate.md` → `references/027-mode-operate-01.md`
+- `.agents/skills/impeccable/reference/mode-persuade.md` → `references/028-mode-persuade-01.md`
+- `.agents/skills/impeccable/reference/mode-read.md` → `references/029-mode-read-01.md`
+- `.agents/skills/impeccable/reference/new-work.md` → `references/030-new-work-01.md`, `references/030-new-work-02.md`, `references/030-new-work-03.md`, `references/030-new-work-04.md`, `references/030-new-work-05.md`, `references/030-new-work-06.md`, `references/030-new-work-07.md`
+- `.agents/skills/impeccable/reference/onboard.md` → `references/031-onboard-01.md`
+- `.agents/skills/impeccable/reference/operate.md` → `references/032-operate-01.md`
+- `.agents/skills/impeccable/reference/optimize.md` → `references/033-optimize-01.md`
+- `.agents/skills/impeccable/reference/overdrive.md` → `references/034-overdrive-01.md`
+- `.agents/skills/impeccable/reference/polish.md` → `references/035-polish-01.md`
+- `.agents/skills/impeccable/reference/quieter.md` → `references/036-quieter-01.md`
+- `.agents/skills/impeccable/reference/region-map.md` → `references/037-region-map-01.md`
+- `.agents/skills/impeccable/reference/routing.md` → `references/038-routing-01.md`
+- `.agents/skills/impeccable/reference/shape.md` → `references/039-shape-01.md`
+- `.agents/skills/impeccable/reference/typeset.md` → `references/040-typeset-01.md`
+- `.agents/skills/impeccable/reference/visualize.md` → `references/041-visualize-01.md`, `references/041-visualize-02.md`

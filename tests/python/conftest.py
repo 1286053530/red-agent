@@ -28,7 +28,7 @@ async def workspace(tmp_path):
     async def handler(request):
         return httpx.Response(200, json={"choices": [{"message": {"content": "需要反馈"}}]})
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    value = Workspace(tmp_path / "data", model_client=client)
+    value = Workspace(tmp_path / "data", model_client=client, intent_classifier=lambda message: {"type": "development"})
     imported = value.import_project(str(project))
     provider = value.save_provider({"name": "fixture", "protocol": "compatible", "baseUrl": "https://example.com/v1", "model": "fixture", "apiKey": "fixture-secret"})
     pub = value.create_session({"projectId": imported["id"]})

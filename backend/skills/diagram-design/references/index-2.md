@@ -1,0 +1,23 @@
+- `skills/diagram-design/assets/example-scatter.html` → `references/054-example-scatter-01.md`
+- `skills/diagram-design/assets/example-sequence-oauth.html` → `references/055-example-sequence-oauth-01.md`, `references/055-example-sequence-oauth-02.md`
+- `skills/diagram-design/assets/example-sequence.html` → `references/056-example-sequence-01.md`, `references/056-example-sequence-02.md`
+- `skills/diagram-design/assets/example-service-blueprint.html` → `references/057-example-service-blueprint-01.md`, `references/057-example-service-blueprint-02.md`
+- `skills/diagram-design/assets/example-slopegraph.html` → `references/058-example-slopegraph-01.md`, `references/058-example-slopegraph-02.md`
+- `skills/diagram-design/assets/example-state-lifecycle.html` → `references/059-example-state-lifecycle-01.md`, `references/059-example-state-lifecycle-02.md`
+- `skills/diagram-design/assets/example-state.html` → `references/060-example-state-01.md`
+- `skills/diagram-design/assets/example-story-map.html` → `references/061-example-story-map-01.md`, `references/061-example-story-map-02.md`
+- `skills/diagram-design/assets/example-streamgraph.html` → `references/062-example-streamgraph-01.md`, `references/062-example-streamgraph-02.md`
+- `skills/diagram-design/assets/example-swimlane.html` → `references/063-example-swimlane-01.md`, `references/063-example-swimlane-02.md`
+- `skills/diagram-design/assets/example-timeline.html` → `references/064-example-timeline-01.md`
+- `skills/diagram-design/assets/example-tree-block-decomposition.html` → `references/065-example-tree-block-decomposition-01.md`
+- `skills/diagram-design/assets/example-tree.html` → `references/066-example-tree-01.md`, `references/066-example-tree-02.md`
+- `skills/diagram-design/assets/example-treemap.html` → `references/067-example-treemap-01.md`
+- `skills/diagram-design/assets/example-uml-class.html` → `references/068-example-uml-class-01.md`, `references/068-example-uml-class-02.md`
+- `skills/diagram-design/assets/example-venn.html` → `references/069-example-venn-01.md`
+- `skills/diagram-design/assets/example-wardley.html` → `references/070-example-wardley-01.md`
+- `skills/diagram-design/assets/example-waterfall.html` → `references/071-example-waterfall-01.md`, `references/071-example-waterfall-02.md`
+- `skills/diagram-design/assets/icons.html` → `references/072-icons-01.md`, `references/072-icons-02.md`, `references/072-icons-03.md`, `references/072-icons-04.md`, `references/072-icons-05.md`, `references/072-icons-06.md`, `references/072-icons-07.md`, `references/072-icons-08.md`, `references/072-icons-09.md`, `references/072-icons-10.md`, `references/072-icons-11.md`, `references/072-icons-12.md`, `references/072-icons-13.md`
+- `skills/diagram-design/assets/index.html` → `references/073-index-01.md`, `references/073-index-02.md`, `references/073-index-03.md`
+- `skills/diagram-design/assets/template-motion.html` → `references/074-template-motion-01.md`, `references/074-template-motion-02.md`, `references/074-template-motion-03.md`
+- `skills/diagram-design/assets/template-terminal.html` → `references/075-template-terminal-01.md`
+- `skills/diagram-design/assets/template.html` → `references/076-template-01.md`
