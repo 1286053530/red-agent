@@ -47,13 +47,12 @@ app.whenReady().then(async () => {
     const picked=await request('/api/dev/pick-folder',{});
     const project=await request('/api/dev/projects',picked);
     assert.equal(project.path,picked.path);
-    const remote=await request('/api/dev/projects/'+project.id+'/remote',{host:'192.0.2.10',port:22,username:'root',hostKey:'SHA256:'+'A'.repeat(43),password:'fixture-password'});
-    assert.equal(remote.host,'192.0.2.10');
-    assert.equal(remote.password,undefined);
     const remoteState=await request('/api/dev/state');
-    assert.equal(remoteState.remotes.length,1);
-    assert.equal(remoteState.remotes[0].projectId,project.id);
-    assert.ok(!JSON.stringify(remoteState).includes('fixture-password'));
+    assert.equal(remoteState.remotes,undefined);
+    for(const path of ['/api/dev/projects/'+project.id+'/remote','/api/dev/projects/'+project.id+'/remote/probe','/api/dev/projects/'+project.id+'/remote/remove']){
+      const response=await fetch(backend.origin+path,{headers,method:'POST',body:'{}'});
+      assert.equal(response.status,404);
+    }
     assert.equal((await request('/api/xhs/status')).status,'automation_disabled');
     for(const path of ['/api/xhs/connect','/api/xhs/login/refresh','/api/xhs/recommendations?more=1','/api/xhs/messages?kind=private&open=1']){
       const response=await fetch(backend.origin+path,{headers,method:'POST'});

@@ -7,7 +7,7 @@
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || '请求失败，请重试。'); return data;
   };
-  const state = { skills: [], projects: [], providers: [], remotes: [], sessions: [], projectId: localStorage.getItem('devProject') || '', sessionId: localStorage.getItem('devSession') || '', files: [], file: '', session: null, busy: false };
+  const state = { skills: [], projects: [], providers: [], sessions: [], projectId: localStorage.getItem('devProject') || '', sessionId: localStorage.getItem('devSession') || '', files: [], file: '', session: null, busy: false };
   let draftImages = [], addingImages = false, sending = false, creatingSession = false, draftGeneration = 0;
   let pollGeneration = 0, pollingId = '', settingsTrigger;
   let reasoningSaving = false;
@@ -30,12 +30,6 @@
       <section class="dev-editor-area"><div class="dev-editor-toolbar"><div class="dev-breadcrumb" id="devEditorTitle">项目文件 <span>/</span> 选择文件</div><div class="dev-editor-tools"><span class="dev-editor-language" id="devFileType">SOURCE</span><button class="dev-plain-button" id="devRefreshFiles">${icon('refresh')}刷新</button></div></div><div class="dev-code-layout"><aside class="dev-file-tree" id="devFileTree"><div class="dev-tree-label">项目文件</div><div class="dev-empty-files">导入项目以浏览源码</div></aside><div class="dev-file-preview" id="devFilePreview"><div class="dev-code-empty"><span class="dev-empty-icon">{ }</span><strong>项目代码，尽在掌握</strong><p>导入本地项目后，可以浏览源码或让 Agent 帮你分析代码结构。</p><button class="primary-button" id="devEmptyImport">${icon('plus')}导入本地项目</button></div></div></div></section></div>
     <div class="dev-bottom-strip"><span>${icon('check')} 模型 API Key 加密保存在本机</span><span>执行检查 → 反馈纠错 → 证据验收</span><button id="devBottomSettings">配置接入模型 ${icon('arrow')}</button></div>
     <div class="dev-modal-backdrop hidden" id="devSettingsModal" role="presentation"><div class="dev-settings-modal" role="dialog" aria-modal="true" aria-labelledby="devSettingsTitle"><div class="dev-modal-title"><div><div class="eyebrow"><span class="eyebrow-line"></span> MODEL PROVIDERS</div><h2 id="devSettingsTitle">模型接入设置</h2></div><button id="devCloseSettings" class="dev-square-button" aria-label="关闭">×</button></div><p class="dev-modal-description">接入 OpenAI Chat Completions、Responses 或 Anthropic Messages API。需要你自备 API Key 与模型权限。执行任务时，任务描述、添加的图片和 Agent 读取的源码将发送给所选模型服务。图片输入需要模型支持视觉能力。</p><div id="devSettingsError" class="dev-inline-error hidden" role="alert"></div><div id="devProviderList" class="dev-provider-list"></div><form id="devProviderForm" class="dev-provider-form"><input type="hidden" id="devProviderId"><label>配置名称<input id="devProviderName" maxlength="60" placeholder="如 DeepSeek 主力模型" required></label><label>接口协议<select id="devProviderProtocol"><option value="compatible">OpenAI Chat Completions</option><option value="responses">OpenAI Responses API</option><option value="anthropic">Anthropic Messages API</option></select></label><label class="dev-provider-wide">Base URL<input id="devProviderUrl" type="url" placeholder="https://api.deepseek.com/v1" required></label><label>模型名称<input id="devProviderModel" maxlength="150" placeholder="deepseek-chat" required></label><label>API Key<input id="devProviderKey" type="password" autocomplete="new-password" placeholder="sk-…（保留当前密钥请留空）"></label><div class="dev-provider-actions"><button type="button" class="secondary-button" id="devProviderCancel">取消</button><button type="submit" class="primary-button" id="devProviderSave">保存模型</button></div></form><div class="dev-modal-footer"><span>${icon('check')} 密钥使用本机密钥加密后存储</span><button type="button" id="devAddProvider">${icon('plus')}添加模型配置</button></div></div></div>`;
-
-  $('.dev-task-options').insertAdjacentHTML('beforeend', '<label class="dev-permission"><input type="checkbox" id="devAllowRemote">本次任务允许 SSH 执行与上传</label><small id="devRemoteGrantHint">请先为当前项目配置 SSH；远程操作仅对本次任务授权。</small><button type="button" class="dev-plain-button" id="devConfigureRemote">配置项目 SSH</button>');
-  $('#devSettingsModal .dev-modal-footer').insertAdjacentHTML('afterend', `
-    <section class="dev-remote-section" id="devRemoteSection"><h3>项目 SSH 连接</h3><p>仅用于当前项目；密码加密保存在本机，不发送给模型。首次使用前核对主机指纹，并在新任务中单独勾选 SSH 授权；请勿在任务描述中粘贴密码。</p>
-      <form id="devRemoteForm" class="dev-provider-form"><label>主机名或 IPv4<input id="devRemoteHost" required maxlength="253" placeholder="例如 192.0.2.10"></label><label>端口<input id="devRemotePort" type="number" min="1" max="65535" value="22" required></label><label>用户名<input id="devRemoteUser" required maxlength="64" placeholder="root"></label><label>密码<input id="devRemotePassword" type="password" autocomplete="new-password" placeholder="留空则保留已保存密码"></label><label class="dev-provider-wide">主机公钥 SHA-256 指纹<input id="devRemoteKey" required placeholder="SHA256:..."></label><div class="dev-provider-actions"><button type="button" class="secondary-button" id="devRemoteProbe">读取主机指纹</button><button type="button" class="secondary-button" id="devRemoteRemove">删除配置</button><button type="submit" class="primary-button" id="devRemoteSave">保存 SSH</button></div></form><small id="devRemoteStatus" role="status"></small>
-    </section>`);
 
   const composerTools = document.createElement('div');
   composerTools.className = 'dev-composer-tools';
@@ -227,7 +221,7 @@
   updateRightWidth(preferredRightWidth);
   const toast = message => window.showToast ? showToast(message) : void 0;
   const setError = message => { const box = $('#devSettingsModal').classList.contains('hidden') ? $('#devError') : $('#devSettingsError'); box.textContent = message || ''; box.classList.toggle('hidden', !message); };
-  const openSettings = () => { settingsTrigger = $('#devModelPicker > summary'); closeComposerPickers(); $('#devSettingsModal').classList.remove('hidden'); renderProviders(); renderRemoteForm(); $('#devCloseSettings').focus(); };
+  const openSettings = () => { settingsTrigger = $('#devModelPicker > summary'); closeComposerPickers(); $('#devSettingsModal').classList.remove('hidden'); renderProviders(); $('#devCloseSettings').focus(); };
   const projectSidebar = document.createElement('section');
   projectSidebar.className = 'dev-project-sidebar';
   projectSidebar.setAttribute('aria-label', '开发项目与会话');
@@ -470,20 +464,6 @@
     const project=state.projects.find(p=>p.id===state.projectId), provider=state.providers.find(p=>p.id===$('#devModelSelect').value);
     $('#devAccessScopeBody').innerHTML=accessScopeHtml({root:project?.path,model:provider},state.accessPolicy);
   }
-  function projectRemote() { return state.remotes.find(remote => remote.projectId === state.projectId); }
-  function renderRemoteForm() {
-    const remote = projectRemote(), section = $('#devRemoteSection');
-    section.classList.toggle('hidden', !state.projectId);
-    if (!state.projectId) return;
-    $('#devRemoteHost').value = remote?.host || '';
-    $('#devRemotePort').value = remote?.port || 22;
-    $('#devRemoteUser').value = remote?.username || '';
-    $('#devRemoteKey').value = remote?.hostKey || '';
-    $('#devRemotePassword').value = '';
-    $('#devRemotePassword').required = !remote;
-    $('#devRemoteRemove').disabled = !remote;
-    $('#devRemoteStatus').textContent = remote ? '已绑定 ' + remote.username + '@' + remote.host + ':' + remote.port + '；修改主机或指纹后，旧任务不能继续使用 SSH。' : '未配置 SSH。请先读取并核对主机指纹。';
-  }
   function accessSettings() {
     return {kind: $('#devTaskKind').value, permissions: {edits: $('#devAllowEdits').checked, commands: $('#devAllowCommands').checked}};
   }
@@ -492,7 +472,6 @@
     $('#devTaskKind').value = settings?.kind || 'auto';
     $('#devAllowEdits').checked = settings?.permissions?.edits === true;
     $('#devAllowCommands').checked = settings?.permissions?.commands === true;
-    $('#devAllowRemote').checked = false;
     accessProjectId = state.projectId;
     renderAccessControl();
   }
@@ -525,10 +504,7 @@
   }
   function renderAccessControl() {
     const readOnly = $('#devTaskKind').value === 'inspect';
-    if(readOnly){$('#devAllowEdits').checked=false;$('#devAllowCommands').checked=false;$('#devAllowRemote').checked=false;}
-    const remote = projectRemote();
-    if(!remote)$('#devAllowRemote').checked=false;
-    $('#devRemoteGrantHint').textContent = remote ? `目标：${remote.username}@${remote.host}:${remote.port}。勾选后，本次任务可在该主机运行命令和上传项目文件。` : '请先为当前项目配置 SSH；远程操作仅对本次任务授权。';
+    if(readOnly){$('#devAllowEdits').checked=false;$('#devAllowCommands').checked=false;}
     const edits = $('#devAllowEdits').checked, commands = $('#devAllowCommands').checked;
     const mode = readOnly ? 'readonly' : edits && commands ? 'automatic' : !edits && !commands ? 'review' : 'custom';
     composerTools.dataset.access=mode;
@@ -540,8 +516,6 @@
     composerTools.querySelectorAll('[name="devAccessMode"]').forEach(input=>{input.checked=input.value===mode;input.disabled=disabled;});
     $('#devTaskKind').disabled=disabled;
     ['#devAllowEdits','#devAllowCommands'].forEach(selector=>{$(selector).disabled=disabled||readOnly;});
-    $('#devAllowRemote').disabled=disabled||readOnly||!remote;
-    $('#devConfigureRemote').disabled=disabled;
     renderAccessPolicy();
   }
   function renderProviders() {
@@ -565,14 +539,14 @@
   }
   async function loadState() {
     try {
-      const next = await api('state'); state.skills = next.skills || []; state.projects = next.projects; state.providers = next.providers; state.remotes = next.remotes || []; state.sessions = next.sessions;
+      const next = await api('state'); state.skills = next.skills || []; state.projects = next.projects; state.providers = next.providers; state.sessions = next.sessions;
       state.accessPolicy = next.accessPolicy;
       if (state.projectId && !state.projects.some(p => p.id === state.projectId)) state.projectId = '';
       if (state.sessionId && !state.sessions.some(s => s.id === state.sessionId && s.projectId === state.projectId)) state.sessionId = '';
       if (!state.sessionId) { state.session = null; state.busy = false; }
       if (accessProjectId !== state.projectId) restoreProjectAccess();
       rememberSelection();
-      renderProjects(); renderProviders(); renderRemoteForm(); renderAccessControl();
+      renderProjects(); renderProviders(); renderAccessControl();
       if (state.projectId) { await loadSessions(); await loadFiles(); }
       if (state.sessionId) await loadSession(state.sessionId);
       else { renderConversation(); renderPending(); renderExecution(); }
@@ -695,7 +669,6 @@
   async function createSession(preserveDraft = false, projectId = state.projectId) {
     if (!projectId || creatingSession || (sending && !preserveDraft)) return;
     let selectedSessionId = state.sessionId;
-    const remoteGrant = preserveDraft && $('#devAllowRemote').checked;
     creatingSession = true; renderProjects();
     try {
       if (projectId !== state.projectId) {
@@ -712,7 +685,6 @@
       if (!preserveDraft) clearImages();
       state.sessionId = session.id;
       restoreProjectAccess();
-      if (remoteGrant && projectRemote()) $('#devAllowRemote').checked = true;
       renderAccessControl(); rememberSelection(); await loadSession(session.id);
       if (projectId !== state.projectId || state.sessionId !== session.id) return;
       return session.id;
@@ -815,9 +787,8 @@
     const unresolved=session.commands.filter(c=>c.taskId===task.id&&['interrupted','running','queued'].includes(c.status));
     target.innerHTML=`<div class="dev-execution-head"><strong>${escapeHtml(statusLabel(session.status))}</strong><span>${escapeHtml(phase)}</span><button id="devExportLogs">导出记录</button></div><div class="dev-run-metrics"><span>${task.rounds} 轮 / ${task.calls} 次工具</span><span>${elapsed}s</span><span>${metrics.inputTokens+metrics.outputTokens} tokens</span><span>${metrics.failedCommands} 次检查失败 / ${metrics.toolErrors || 0} 次工具错误 / ${metrics.interventions} 次交互</span></div><p class="dev-active-skill">${task.skill?`任务 Skill：${escapeHtml(task.skill.name)} · v${escapeHtml(task.skill.version)}${workflowLabel} · 已加载 ${task.skill.loadedResources.length} 份补充指引`:'任务未加载内置 Skill'}</p><details><summary>任务计划与执行轨迹</summary><p>目标：${escapeHtml(task.goal)}</p><p>验收：${escapeHtml(task.acceptance)}</p><p>当前：${escapeHtml(checkpoint.summary || '正在明确任务')}</p><p>下一步：${escapeHtml(checkpoint.next_action || '读取相关源码')}</p>${checkpoint.failure?`<p class="dev-run-error">失败反馈：${escapeHtml(checkpoint.failure)}</p>`:''}${evidence?`<p>已确认的关键证据</p><ul>${evidence}</ul>`:''}${todo?`<p>待办</p><ol>${todo}</ol>`:''}${unresolved.length?`<p class="dev-run-error">中断的命令结果未知，请检查记录后重试：${unresolved.map(c=>escapeHtml(c.command+' '+c.args.join(' '))).join('；')}</p>`:''}<ol>${events.map(e=>`<li><strong>${escapeHtml(e.name)}</strong> · ${escapeHtml(e.detail)} <span>${escapeHtml(e.status==='completed'?'已执行':statusLabel(e.status))}</span>${e.error?`<p class="dev-run-error">${escapeHtml(e.error)}</p>`:''}${e.recovery?`<p>处理建议：${escapeHtml(e.recovery)}</p>`:''}</li>`).join('')}</ol><small>Token 由服务商返回，费用以厂商账单为准。完整记录包含工具输入、结果和时间。</small></details>${session.commands.filter(c=>c.taskId===task.id).map(c=>`<article class="dev-command-card"><div><strong>${escapeHtml(c.command+' '+c.args.join(' '))}</strong><span>${escapeHtml(statusLabel(c.status))}${c.exitCode!==null?' · exit '+c.exitCode:''}</span></div><p>${escapeHtml(c.purpose)}</p>${c.script?`<pre>${escapeHtml(c.script)}</pre>`:''}${c.output||c.error?`<details><summary>查看输出${c.truncated?'（仅保留末尾，已截断）':''}${c.stale?' · 源码已变化':''}</summary><pre>${escapeHtml(c.output || c.error)}</pre></details>`:''}${c.status==='pending_approval'?`<small>批准后以本机账号执行项目代码，可访问项目外文件和网络；执行范围见本任务访问范围。</small><div class="dev-command-actions"><button data-command-id="${c.id}" data-command-action="deny">拒绝</button><button data-command-id="${c.id}" data-command-action="approve" ${task.kind==='inspect'||session.archivedAt?'disabled':''}>批准本次命令</button></div>`:''}</article>`).join('')}${task.result?`<p class="dev-verification">验证依据：${escapeHtml(task.result.evidence)}</p>`:''}${['failed','needs_help','stopped','awaiting_user'].includes(session.status)?`<button id="devResumeTask" class="secondary-button">${session.status==='awaiting_user'?'回答并继续当前任务':session.status==='failed'?'重试当前任务':'继续当前任务'}</button>`:''}`;
     const taskMode=task.kind==='inspect'?'只读分析':task.permissions.edits&&task.permissions.commands?'自动执行':!task.permissions.edits&&!task.permissions.commands?'逐项审核':'自定义权限';
-    const taskActions=task.kind==='inspect'?'禁止修改和运行代码':`修改${task.permissions.edits?'自动应用':'需审核'} · 命令${task.permissions.commands?'自动执行':'需审核'} · SSH${task.remoteScope?'已授权':'未授权'}`;
-    const remoteScope=task.remoteScope?`<p>SSH 目标：${escapeHtml(task.remoteScope.username)}@${escapeHtml(task.remoteScope.host)}:${task.remoteScope.port} · ${escapeHtml(task.remoteScope.hostKey)}</p>`:'';
-    target.querySelector('.dev-active-skill').insertAdjacentHTML('afterend', `<section id="devTaskAccess"><p><strong>当前任务权限：${taskMode}</strong> · ${taskActions}</p><details><summary>本任务访问范围</summary>${accessScopeHtml(task.accessScope,state.accessPolicy)}${remoteScope}</details></section>`);
+    const taskActions=task.kind==='inspect'?'禁止修改和运行代码':`修改${task.permissions.edits?'自动应用':'需审核'} · 命令${task.permissions.commands?'自动执行':'需审核'}`;
+    target.querySelector('.dev-active-skill').insertAdjacentHTML('afterend', `<section id="devTaskAccess"><p><strong>当前任务权限：${taskMode}</strong> · ${taskActions}</p><details><summary>本任务访问范围</summary>${accessScopeHtml(task.accessScope,state.accessPolicy)}</details></section>`);
     const routing=task.lastIntent;
     if(routing?.type==='development'){
       const kind=routing.effectiveKind==='inspect'?'只读分析':'修改与验证';
@@ -903,7 +874,7 @@
       closeComposerPickers(); setError('');
       const body = resuming ? {feedback: message, images} : {providerId, message, images, reasoningEffort: $('#devReasoningSelect').value,
         acceptance: $('#devAcceptance').value, kind: $('#devTaskKind').value, skillId: $('#devSkillSelect').value,
-        permissions: {edits: $('#devAllowEdits').checked, commands: $('#devAllowCommands').checked}, remote: $('#devAllowRemote').checked};
+        permissions: {edits: $('#devAllowEdits').checked, commands: $('#devAllowCommands').checked}};
       await api(`sessions/${encodeURIComponent(sessionId)}/${resuming ? 'resume' : 'run'}`, body);
       if (state.sessionId === sessionId) { $('#devPrompt').value = ''; clearImages(); await loadSession(sessionId); }
     } catch (error) {
@@ -1016,16 +987,7 @@
     }
     if (button.id === 'devImportButton' || button.id === 'devEmptyImport') { await importProject(); return; }
     if (button.id === 'devRefreshFiles') { await loadFiles(); return; }
-    if (button.id === 'devSettingsButton' || button.id === 'devSettingsQuick' || button.id === 'devManageModel' || button.id === 'devBottomSettings' || button.id === 'devConfigureRemote') { openSettings(); return; }
-    if (button.id === 'devRemoteProbe') {
-      button.disabled=true;
-      try { const result=await api(`projects/${encodeURIComponent(state.projectId)}/remote/probe`,{host:$('#devRemoteHost').value.trim(),port:Number($('#devRemotePort').value)}); $('#devRemoteKey').value=result.hostKey; $('#devRemoteStatus').textContent=`检测到 ${result.algorithm} 指纹 ${result.hostKey}。请通过可信渠道核对后保存。`; }
-      catch(error){setError(error.message);} finally{button.disabled=false;} return;
-    }
-    if (button.id === 'devRemoteRemove') {
-      if(!confirm('删除当前项目的 SSH 配置？未结束任务将无法继续使用远程工具。'))return;
-      try{await api(`projects/${encodeURIComponent(state.projectId)}/remote/remove`,{});await loadState();toast('SSH 配置已删除');}catch(error){setError(error.message);}return;
-    }
+    if (button.id === 'devSettingsButton' || button.id === 'devSettingsQuick' || button.id === 'devManageModel' || button.id === 'devBottomSettings') { openSettings(); return; }
     if (button.id === 'devCloseSettings') { closeSettings(); return; }
     if (button.id === 'devAddProvider') { openProviderForm(); return; }
     if (button.id === 'devProviderCancel') { resetProviderForm(); return; }
@@ -1073,7 +1035,6 @@
       renderAccessControl();saveProjectAccess();$('#devAccessPicker').open=false;
     }
     if(['devTaskKind','devAllowEdits','devAllowCommands'].includes(event.target.id)){renderAccessControl();saveProjectAccess();}
-    if(event.target.id==='devAllowRemote')renderAccessControl();
     if(event.target.id==='devSkillSelect'){$('#devSkillContent').classList.add('hidden');renderSkills();}
     if (event.target.id === 'devModelSelect') { localStorage.setItem('devSelectedProvider', event.target.value); renderModelLabel(); updateSendButton(); renderConversation(); $('#devModelPicker').open=false; }
     if (event.target.id === 'devReasoningSelect') void saveReasoningEffort(event.target.value);
@@ -1097,13 +1058,6 @@
       await loadState(); resetProviderForm(); setError(''); toast('模型配置已保存');
     } catch (error) { setError(error.message); }
     finally { button.disabled = false; button.textContent = $('#devProviderId').value ? '保存修改' : '保存模型'; }
-  });
-  $('#devRemoteForm').addEventListener('submit', async event => {
-    event.preventDefault(); const button=$('#devRemoteSave'); button.disabled=true;
-    try {
-      await api(`projects/${encodeURIComponent(state.projectId)}/remote`,{host:$('#devRemoteHost').value.trim(),port:Number($('#devRemotePort').value),username:$('#devRemoteUser').value.trim(),password:$('#devRemotePassword').value,hostKey:$('#devRemoteKey').value.trim()});
-      await loadState();setError('');toast('项目 SSH 配置已保存；新任务可单独授权使用');
-    } catch(error){setError(error.message);} finally{button.disabled=false;}
   });
   document.addEventListener('keydown', event => {
     if ($('#devSettingsModal').classList.contains('hidden')) return;

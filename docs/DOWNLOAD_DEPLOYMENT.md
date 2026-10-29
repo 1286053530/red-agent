@@ -1,5 +1,17 @@
 # 安装包下载服务
 
+## 2.1.51：移除应用内项目 SSH（本地交付）
+
+设置页的 SSH 配置及任务授权入口、远程执行/上传工具和配置 API 已撤除；历史版本说明保留在后续章节。全量回归 346 项、源码与打包后端桌面桥接、解包版及实际 Portable 桌面启动均通过。npm run dist:win 生成新版本产物，打包前端和工具定义与源码一致，2.1.50 旧包哈希保持不变。
+
+| 文件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.51-x64.exe | 131448326 | f371a8c434023975027ec7dc90a5b4c189004f88d0f3412c10712f38f4d20a80 |
+| XiaozhuShujin-2.1.51-x64-Portable.exe | 131240896 | e954bd556d925145281c32b09cf959a24315cd529a1b42684a17035e5f93c65b |
+| XiaozhuShujin-Setup-2.1.51-x64.exe.blockmap | 138377 | e9f5da5f0df679ebec40d10e6efc9f902e34ee8d13e3772a729192301c704af2 |
+
+校验清单：release/SHA256SUMS-2.1.51.txt；汇总报告：.local/python-check/release-2.1.51.json；回归记录：.local/python-check/pytest-2.1.51.xml。本次仅本地构建，未上传公网；安装版已生成并核验哈希，实际启动验收针对解包版及 Portable，未进行交互安装、升级或卸载。
+
 ## 2.1.50：项目 SSH 执行与上传（本地交付）
 
 新增经主机指纹校验、项目级加密配置和任务级授权的 SSH 命令与文件上传，详见 [权限说明](ACCESS_PERMISSIONS.md)。全量回归 362 项、最终微调后 SSH 定向测试 22 项通过。npm run dist:win 按原配置构建成功；一次重打包受本次烟测遗留进程占用临时文件影响，清理后重试成功，未关闭完整性检查。打包后端桌面桥接和最终 Portable 实际启动通过；校验清单经 Python 独立复核，2.1.49 旧包哈希保持不变。

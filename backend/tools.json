@@ -296,41 +296,6 @@
   {
     "type": "function",
     "function": {
-      "name": "remote_command",
-      "description": "Run one shell command over SSH on the project's pinned, explicitly authorized remote. Use it to inspect, back up, deploy and verify. Password is loaded from encrypted local settings, never passed as a tool argument. Confirm backup and rollback before changing live services. Output is bounded; inspect status and exitCode. This tool is unavailable unless the user enabled SSH for this task.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "command": {"type": "string", "description": "Single remote shell command; do not include passwords or secrets"},
-            "purpose": {"type": "string", "description": "What this operation accomplishes or verifies"},
-            "verification": {"type": "boolean", "description": "Set true only for the final post-change remote check that verifies the requested result. A successful SSH connection or pre-deployment check is not sufficient."},
-          "timeout_ms": {"type": "integer", "minimum": 1000, "maximum": 300000}
-        },
-        "required": ["command", "purpose"],
-        "additionalProperties": false
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "remote_upload",
-      "description": "Upload a project file or recursively upload a project directory over SFTP to a new absolute path on the pinned SSH remote. Private, ignored and linked local paths remain inaccessible. Existing remote target files are never overwritten. Inspect returned status/files/bytes; upload alone does not prove deployment. This tool is unavailable unless the user enabled SSH for this task.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "local_path": {"type": "string", "description": "Project-relative file or directory"},
-          "remote_path": {"type": "string", "description": "Absolute POSIX path; a file target or directory root"},
-          "purpose": {"type": "string", "description": "Why this upload is needed"}
-        },
-        "required": ["local_path", "remote_path", "purpose"],
-        "additionalProperties": false
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
       "name": "request_user",
       "description": "Pause only when a concrete user answer or choice is required. State the specific question, why existing tools cannot resolve it, and optional completed work. This is waiting for user, never completion.",
       "parameters": {

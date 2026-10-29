@@ -77,7 +77,6 @@ body[data-view="developer"] .main-content{padding-bottom:24px}
 .dev-task-options label:not(.dev-permission) { flex-wrap: wrap; }
 .dev-task-options select, .dev-task-options input:not([type=checkbox]) { min-width: 0; flex: 1; border: 1px solid #dce3df; border-radius: 6px; padding: 7px; background: #fff; color: #273f34; }
 .dev-task-options small { display: block; line-height: 1.7; }
-.dev-remote-section{margin-top:20px;padding-top:16px;border-top:1px solid #e6ebf3}.dev-remote-section h3{margin:0 0 5px;font-size:15px;color:#455b7d}.dev-remote-section p,.dev-remote-section>small{display:block;margin:0 0 10px;color:#7385a0;font-size:12px;line-height:1.6}.dev-remote-section .dev-provider-form{border-top:0;padding-top:4px}.dev-remote-section input{width:100%}.dev-remote-section .dev-provider-actions{flex-wrap:wrap}
 .dev-execution { flex: 0 1 auto; min-height: 0; max-height: 310px; overflow: auto; border-top: 1px solid #e4e9e6; background: #f6f8f7; font-size: 11px; overflow-wrap: anywhere; }
 .dev-execution:empty { display: none; }
 #devTaskAccess { margin: 8px 14px; }
