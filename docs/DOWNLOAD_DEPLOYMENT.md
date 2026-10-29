@@ -1,5 +1,17 @@
 # 安装包下载服务
 
+## 2.1.52：由执行环境发起 SSH（本地交付）
+
+Agent 通过受控 run_command 从运行命令的本机环境调用 SSH，不要求应用内 SSH 配置；本机密钥、ssh-agent、known_hosts 和用户明确提供的一次性密码按权限与脱敏规则处理。全量 355 项回归、SSH 定向回归 58 项、打包后端桥接、源码/解包/Portable 实际启动均通过。首次 Portable 烟测因构建资源占用退出，重建后复测通过。仅本地构建，未连接真实服务器或上传公网。
+
+| 文件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.52-x64.exe | 132544092 | bdbac0bc6a2796d4df6c0d9daa1ee4c84f2cf47646df31a4f1f5fff49652516a |
+| XiaozhuShujin-2.1.52-x64-Portable.exe | 132336655 | 99bfa4e8d326c7db6a589926ce67217fd2e5705226c9a5ebfeb8261444d7dd5a |
+| XiaozhuShujin-Setup-2.1.52-x64.exe.blockmap | 139866 | 699a4df0aa427c76b347dc3937a8f2c604c9a9b96f87e1b2bdc804962f120394 |
+
+校验清单：release/SHA256SUMS-2.1.52.txt；回归记录：.local/python-check/pytest-2.1.52.xml；源码/打包后端桥接：.local/python-check/desktop-source.json、.local/python-check/desktop-packaged.json；实际桌面烟测：.local/python-check/app-source.json、.local/python-check/app-packaged.json、.local/python-check/app-portable.json。安装版已生成并核验哈希，未进行交互安装、升级或卸载。
+
 ## 2.1.51：移除应用内项目 SSH（本地交付）
 
 设置页的 SSH 配置及任务授权入口、远程执行/上传工具和配置 API 已撤除；历史版本说明保留在后续章节。全量回归 346 项、源码与打包后端桌面桥接、解包版及实际 Portable 桌面启动均通过。npm run dist:win 生成新版本产物，打包前端和工具定义与源码一致，2.1.50 旧包哈希保持不变。

@@ -8,6 +8,7 @@ import re
 import shutil
 import signal
 import tempfile
+import threading
 import time
 
 from .common import AppError, now
@@ -16,9 +17,32 @@ from .python_checks import python_check, python_environment
 CHECK_SCRIPTS = {"test", "build", "lint", "typecheck", "check"}
 REPORTER = Path(__file__).with_name("agent-test-reporter.mjs")
 PYTHON_RUNNER = Path(__file__).with_name("agent-python-runner.py")
+SSH_TARGET = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]{0,63}@[A-Za-z0-9][A-Za-z0-9.-]{0,252}$")
+
+
+def ssh_parts(args):
+    if not isinstance(args, list):
+        raise AppError("SSH 参数须为目标和远程命令。")
+    if len(args) not in {2, 4} or any(not isinstance(arg, str) for arg in args):
+        raise AppError("SSH 仅支持 [-p 端口] 用户@主机 远程命令。")
+    if len(args) == 2:
+        port, target, remote_command = 22, *args
+    elif len(args) == 4 and args[0] == "-p" and args[1].isdigit():
+        port, target, remote_command = int(args[1]), args[2], args[3]
+    else:
+        raise AppError("SSH 仅支持 [-p 端口] 用户@主机 远程命令。")
+    host = target.partition("@")[2]
+    if (not 1 <= port <= 65535 or not SSH_TARGET.fullmatch(target)
+            or ".." in host or host.endswith(".") or not remote_command.strip()
+            or len(remote_command) > 12000 or re.search(r"[\x00-\x1f]", remote_command)):
+        raise AppError("SSH 目标、端口或远程命令无效。")
+    return port, target, remote_command
 
 
 def validate_command(command, args):
+    if command == "ssh":
+        ssh_parts(args)
+        return
     if not isinstance(args, list) or len(args) > 30 or any(
         not isinstance(a, str) or len(a) > 500 or re.search(r"[\x00-\x1f]", a) for a in args
     ):
@@ -31,7 +55,7 @@ def validate_command(command, args):
     if command == "python":
         python_check(args)
         return
-    raise AppError("仅支持受控的 Node/npm 和 Python 项目检查；不支持 shell 或依赖安装。")
+    raise AppError("仅支持受控的 Node/npm/Python 项目检查和 SSH 远程命令；不支持 shell 或依赖安装。")
 
 
 def bounded_history(history, max_chars=42000):
@@ -81,6 +105,15 @@ def node_executable():
 
 
 def command_argv(command, args, env, cwd=None, report=None):
+    if command == "ssh":
+        executable = shutil.which("ssh")
+        if not executable:
+            raise AppError("运行环境未找到 OpenSSH 客户端。")
+        port, target, remote_command = ssh_parts(args)
+        if os.environ.get("SSH_AUTH_SOCK"):
+            env["SSH_AUTH_SOCK"] = os.environ["SSH_AUTH_SOCK"]
+        return [executable, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new",
+                "-o", "ConnectTimeout=10", "-p", str(port), target, remote_command]
     if command == "python":
         environment = python_environment(cwd)
         executable = environment["executable"]
@@ -135,10 +168,36 @@ async def kill_tree(process):
             pass
 
 
-async def run_process(command, args, cwd, stop=None, timeout_ms=60000, on_output=None):
+async def run_process(command, args, cwd, stop=None, timeout_ms=60000, on_output=None, ssh_password=None):
     validate_command(command, args)
     started = time.monotonic()
     timeout_ms = min(120000, max(100, int(timeout_ms)))
+    if ssh_password is not None:
+        if command != "ssh" or not isinstance(ssh_password, str) or not ssh_password or len(ssh_password) > 4096:
+            raise AppError("SSH 密码参数无效。")
+        from .ssh_runtime import run_password_ssh
+        password_stop = threading.Event()
+        worker = asyncio.create_task(asyncio.to_thread(run_password_ssh, *ssh_parts(args), ssh_password, password_stop, timeout_ms))
+        interrupted = asyncio.create_task((stop or asyncio.Event()).wait())
+        try:
+            done, _ = await asyncio.wait([worker, interrupted], timeout=timeout_ms / 1000, return_when=asyncio.FIRST_COMPLETED)
+            if worker in done:
+                result = await worker
+            else:
+                password_stop.set()
+                worker.add_done_callback(lambda task: task.exception() if not task.cancelled() else None)
+                result = {"status": "interrupted" if interrupted in done else "timed_out", "exitCode": None,
+                          "output": "", "bytes": 0}
+        except asyncio.CancelledError:
+            password_stop.set()
+            worker.add_done_callback(lambda task: task.exception() if not task.cancelled() else None)
+            raise
+        finally:
+            interrupted.cancel()
+            await asyncio.gather(interrupted, return_exceptions=True)
+        return {**result, "passedTests": None, "signal": None, "error": result.get("error", ""),
+                "truncated": result.get("bytes", 0) > 24000,
+                "durationMs": round((time.monotonic() - started) * 1000), "finishedAt": now()}
     env = child_environment()
     output, byte_count, passed_tests = "", 0, None
     status, error, process = "", "", None

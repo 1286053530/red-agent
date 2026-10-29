@@ -14,7 +14,7 @@ from .browser import NativeBrowser
 from .common import AppError, dumps, uid
 from .server import create_app
 from .workspace import Workspace
-from .runtime import run_process
+from .runtime import run_process, validate_command
 from .skill_catalog import SkillCatalog
 
 
@@ -75,7 +75,7 @@ async def serve(args):
         while not server.started and not running.done():
             await asyncio.sleep(0.01)
         if server.started:
-            print(dumps({"type": "ready", "origin": f"http://127.0.0.1:{app.state.port}", "token": token, "backend": "python", "version": "2.1.51"}), flush=True)
+            print(dumps({"type": "ready", "origin": f"http://127.0.0.1:{app.state.port}", "token": token, "backend": "python", "version": "2.1.52"}), flush=True)
         await running
     finally:
         sock.close()
@@ -88,6 +88,11 @@ async def runtime_self_test(python_checks=False):
     skill = SkillCatalog().snapshot()
     assert skill["metadata"]["id"] == "software-development" and skill["content"].startswith("---")
     assert len(skill["resources"]) == 7
+    from .model import TOOLS
+    from .ssh_runtime import run_password_ssh
+    validate_command("ssh", ["test@example.org", "uname"])
+    assert callable(run_password_ssh)
+    assert "ssh" in next(tool for tool in TOOLS if tool["function"]["name"] == "run_command")["function"]["parameters"]["properties"]["command"]["enum"]
     with tempfile.TemporaryDirectory(prefix="shujin-runtime-") as folder:
         Path(folder, "real.test.mjs").write_text("import {test} from 'node:test';import assert from 'node:assert/strict';test('behavior',()=>assert.equal(2+3,5));", encoding="utf-8")
         Path(folder, "empty.test.mjs").write_text("// empty", encoding="utf-8")
@@ -110,7 +115,7 @@ async def runtime_self_test(python_checks=False):
                     or passed_pytest["passedTests"] != 1):
                 raise RuntimeError(dumps({"failedPython": failed_python, "passedPython": passed_python, "pytest": passed_pytest}))
             python_result = {"python": {"failedExitCode": 1, "unittestPassed": 1, "pytestPassed": 1}}
-        print(dumps({"type": "runtime_self_test", "passed": True, "passedTests": 1, "emptyTests": 0, "skill": skill["metadata"], **python_result}), flush=True)
+        print(dumps({"type": "runtime_self_test", "passed": True, "passedTests": 1, "emptyTests": 0, "sshRuntime": True, "skill": skill["metadata"], **python_result}), flush=True)
 
 
 def main():

@@ -23,4 +23,4 @@ BASE.md 已提供计划、分页读取、审批、验证、交付和恢复规范
 - [JavaScript/Node](references/javascript-node.md)：涉及 JavaScript、TypeScript 或 Node 实现与检查时读取。
 - [Python](references/python.md)：涉及 Python 实现与检查时读取，包含解释器和执行边界。
 
-只读任务只能交付静态证据；源码修改仍须真实行为验证和 review_diff 后才能 finish_task。工具不支持的检查如实说明，不通过脚本绕过限制。
+只读任务只能交付静态证据；源码修改仍须真实行为验证和 review_diff 后才能 finish_task。远程任务可直接用 run_command 的 ssh 从执行环境连接，不要求应用内 SSH 配置；有现成密钥/agent 时用本机 OpenSSH，用户在任务中明确提供密码时用单独的 password 参数。先核验目标和备份条件，最终以远端检查结果交付；网络或凭据缺失时说明具体阻塞，不猜测。工具不支持的检查如实说明，不通过脚本绕过限制。

@@ -2,6 +2,8 @@ import asyncio
 import base64
 import copy
 import difflib
+import hashlib
+import hmac
 import json
 import os
 from pathlib import Path, PureWindowsPath
@@ -33,7 +35,7 @@ INSPECT_TOOLS = {"list_files", "read_file", "search_files", "update_plan", "fini
 INSPECT_CONVERGENCE_TOOLS = INSPECT_TOOLS - {"search_files", "read_skill_resource"}
 INSPECT_DELIVERY_TOOLS = {"finish_task", "request_user", "fail_task"}
 CONTINUATION = re.compile(r"(?:请)?(?:(?:继续|接着)(?:完成|执行|处理)?(?:(?:当前|上次|之前|原来|未完成)(?:的)?)?(?:任务|工作)?|重试(?:当前任务)?|再试一次)|continue|resume|retry", re.I)
-SYSTEM = Path(__file__).with_name("BASE.md").read_text(encoding="utf-8") + "\n\n" + """You are a single software agent in a local source project. Built-in executable checks support JavaScript/Node and Python (pytest, unittest discover, py_compile and project scripts). Respond in Chinese.
+SYSTEM = Path(__file__).with_name("BASE.md").read_text(encoding="utf-8") + "\n\n" + """You are a single software agent in a local source project. Built-in executable checks support JavaScript/Node and Python (pytest, unittest discover, py_compile and project scripts), plus SSH from the command runner's computer. Respond in Chinese.
 Understand the user goal and acceptance, update_plan, search/read relevant source, act, verify actual results,
 correct failures, review_diff, then finish_task with observable evidence. Read all character pages of existing
 files before replacement: follow next_offset with offset while hasMore. A file is not read until all pages
@@ -96,6 +98,37 @@ def atomic_write(path, content, mode=0o600):
         os.replace(temporary, path)
     finally:
         Path(temporary).unlink(missing_ok=True)
+
+
+def protected_ssh_answer(answer):
+    """Keep model-supplied SSH passwords out of persisted tool-call history."""
+    passwords = {}
+    for call in answer.get("tool_calls", []):
+        if call.get("function", {}).get("name") != "run_command":
+            continue
+        try:
+            proposed = json.loads(call["function"].get("arguments") or "{}")
+        except (TypeError, ValueError):
+            continue
+        if isinstance(proposed, dict) and isinstance(proposed.get("password"), str):
+            passwords[call["id"]] = proposed["password"]
+    if not passwords:
+        return answer, passwords
+
+    def redact(value):
+        if isinstance(value, str):
+            for secret in passwords.values():
+                if secret:
+                    for spelling in {secret, json.dumps(secret, ensure_ascii=False)[1:-1], json.dumps(secret)[1:-1]}:
+                        value = value.replace(spelling, "[REDACTED]")
+            return value
+        if isinstance(value, list):
+            return [redact(item) for item in value]
+        if isinstance(value, dict):
+            return {key: redact(item) for key, item in value.items()}
+        return value
+
+    return redact(answer), passwords
 
 
 class Workspace:
@@ -258,11 +291,16 @@ class Workspace:
         if session.get("tasks"):
             result["tasks"] = [{k: v for k, v in task.items() if k != "_skillSnapshot"} for task in session["tasks"]]
         result["changes"] = [{k: v for k, v in c.items() if k != "digest"} for c in session["changes"]]
+        result["commands"] = [Workspace.public_command(c) for c in session["commands"]]
         result = copy.deepcopy(result)
         for task in [*result.get("tasks", []), *([result["task"]] if result.get("task") else [])]:
             if task.get("result") and "files" not in task["result"]:
                 task["result"]["files"] = Workspace.result_files(session, task["id"])
         return result
+
+    @staticmethod
+    def public_command(command):
+        return {k: v for k, v in command.items() if k != "_sshSecret"}
 
     def project(self, project_id):
         return self.find(self.data["projects"], project_id, "项目")
@@ -882,7 +920,7 @@ class Workspace:
             command = self.find(session["commands"], args.get("id"), "命令")
             if command["id"] in self.executions:
                 await self.executions[command["id"]]
-            return command
+            return self.public_command(command) if "_sshSecret" in command else command
         if name == "review_diff":
             changes, latest = [], {}
             for change in session["changes"]:
@@ -920,23 +958,39 @@ class Workspace:
             else:
                 verification = {}
                 fingerprint = self.fingerprint(project)
-                checks = [c for c in session["commands"] if c["taskId"] == task["id"] and is_behavior_check(c["command"], c["args"])]
-                check = checks[-1] if checks else None
-                if not check or check["status"] != "passed" or check.get("stale") or check["fingerprint"] != fingerprint:
-                    raise AppError("缺少当前源码的成功行为测试，请执行实际测试并根据失败修正。")
-                if check["command"] == "python" and check.get("environment") != python_environment(project["path"]):
-                    raise AppError("Python 环境已变化，请在当前环境重新运行行为测试。")
-                latest = {}
-                for command in session["commands"]:
-                    if command["taskId"] == task["id"] and command["fingerprint"] == fingerprint and command["status"] != "denied":
-                        latest[dumps([command["command"], command["args"]])] = command
-                if any(c["status"] != "passed" or c.get("stale") for c in latest.values()):
-                    raise AppError("当前源码仍有失败或结果未知的检查。")
-                review = task.get("review")
-                if not review or review["fingerprint"] != fingerprint or review["conflicts"] or review["at"] < check["finishedAt"]:
-                    raise AppError("请在测试结束后 review_diff，确认最终变更。")
-                verification.update({"commandId": check["id"], "fingerprint": fingerprint, "exitCode": check["exitCode"]})
-                task["verification"] = verification
+                remote_commands = [c for c in session["commands"] if c["taskId"] == task["id"] and c["command"] == "ssh"]
+                local_changes = any(c.get("taskId") == task["id"] and c["status"] == "applied" for c in session["changes"])
+                if remote_commands and not local_changes:
+                    remote = remote_commands[-1]
+                    if (remote["status"] != "passed" or remote.get("stale") or remote["fingerprint"] != fingerprint
+                            or not remote.get("output", "").strip()):
+                        raise AppError("缺少当前任务成功的远端核验输出；请执行 SSH 检查并读取结果。")
+                    latest = {}
+                    for command in session["commands"]:
+                        if command["taskId"] == task["id"] and command["fingerprint"] == fingerprint and command["status"] != "denied":
+                            latest[dumps([command["command"], command["args"]])] = command
+                    if any(c["status"] != "passed" or c.get("stale") for c in latest.values()):
+                        raise AppError("当前任务仍有失败或结果未知的命令。")
+                    verification.update({"commandId": remote["id"], "fingerprint": fingerprint, "exitCode": remote["exitCode"], "remote": True})
+                    task["verification"] = verification
+                else:
+                    checks = [c for c in session["commands"] if c["taskId"] == task["id"] and is_behavior_check(c["command"], c["args"])]
+                    check = checks[-1] if checks else None
+                    if not check or check["status"] != "passed" or check.get("stale") or check["fingerprint"] != fingerprint:
+                        raise AppError("缺少当前源码的成功行为测试，请执行实际测试并根据失败修正。")
+                    if check["command"] == "python" and check.get("environment") != python_environment(project["path"]):
+                        raise AppError("Python 环境已变化，请在当前环境重新运行行为测试。")
+                    latest = {}
+                    for command in session["commands"]:
+                        if command["taskId"] == task["id"] and command["fingerprint"] == fingerprint and command["status"] != "denied":
+                            latest[dumps([command["command"], command["args"]])] = command
+                    if any(c["status"] != "passed" or c.get("stale") for c in latest.values()):
+                        raise AppError("当前源码仍有失败或结果未知的检查。")
+                    review = task.get("review")
+                    if not review or review["fingerprint"] != fingerprint or review["conflicts"] or review["at"] < check["finishedAt"]:
+                        raise AppError("请在测试结束后 review_diff，确认最终变更。")
+                    verification.update({"commandId": check["id"], "fingerprint": fingerprint, "exitCode": check["exitCode"]})
+                    task["verification"] = verification
             session["status"] = "completed"
             task.update(phase="complete", finishedAt=now(), result={"summary": args["summary"][:4000], "evidence": args["evidence"][:4000], "files": self.result_files(session, task["id"]), **({"cards": cards} if cards else {})})
             task["outcome"] = {"status": "completed", "code": "static_review" if task["kind"] == "inspect" else "verified", "reason": args["summary"][:4000], "at": now()}
@@ -965,6 +1019,12 @@ class Workspace:
         require_change_task(session)
         self.check_task_scope(session)
         validate_command(args.get("command"), args.get("args"))
+        password = args.get("password")
+        if password is not None and (args.get("command") != "ssh" or not isinstance(password, str)
+                                     or not password or len(password) > 4096 or any(ord(ch) < 32 for ch in password)):
+            raise AppError("SSH 密码参数无效。")
+        if password and (any(password in item for item in args["args"]) or password in str(args.get("purpose", ""))):
+            raise AppError("SSH 密码只能放在 password 字段，不能写入命令或用途。")
         if not str(args.get("purpose", "")).strip():
             raise AppError("请说明命令验证目的。")
         if self.pending(session) or any(c["status"] in ACTIVE_COMMANDS for c in session["commands"]):
@@ -996,9 +1056,12 @@ class Workspace:
         signature = dumps([args["command"], args["args"], fingerprint])
         if environment:
             signature = dumps([args["command"], args["args"], fingerprint, environment])
+        if password:
+            credential_id = hmac.new(self.key, password.encode("utf-8"), hashlib.sha256).hexdigest()
+            signature = dumps([args["command"], args["args"], fingerprint, credential_id])
         duplicate = next((c for c in reversed(session["commands"]) if c["taskId"] == task["id"] and c["signature"] == signature), None)
         if duplicate and args.get("retry_id") != duplicate["id"]:
-            return {**duplicate, "deduplicated": True, "message": "检查结果后明确指定 retry_id 才会重试。"}
+            return {**self.public_command(duplicate), "deduplicated": True, "message": "检查结果后明确指定 retry_id 才会重试。"}
         failed_retries = [c for c in session["commands"] if c["taskId"] == task["id"] and c["signature"] == signature
                           and c.get("attempt", 1) == task.get("attempt", 1) and c["status"] not in {"passed", "denied"}]
         if len(failed_retries) >= 2:
@@ -1009,15 +1072,17 @@ class Workspace:
         if environment:
             command["environment"] = environment
             command["script"] = "Python: " + environment["executable"] + " (" + environment["source"] + ")"
+        if password:
+            command["_sshSecret"] = self.encrypt(password)
         session["commands"].append(command)
         task["phase"] = "verify"
         if command["status"] == "pending_approval":
             task["metrics"]["interventions"] += 1
-        self.record(session, "command_requested", command=command)
+        self.record(session, "command_requested", command=self.public_command(command))
         self.save()
         if command["status"] == "queued":
             self.launch_command(session, command)
-        return command
+        return self.public_command(command) if password else command
 
     def validate_command_scope(self, session, command):
         require_change_task(session, command)
@@ -1029,6 +1094,8 @@ class Workspace:
             paths = command["args"][1:]
         elif command["command"] == "python":
             _, paths = python_check(command["args"])
+        elif command["command"] == "ssh":
+            paths = []
         else:
             paths = ["package.json"]
         for path in paths:
@@ -1055,16 +1122,18 @@ class Workspace:
                 if command["command"] == "python" and python_environment(self.project(session["projectId"])["path"]) != command.get("environment"):
                     raise AppError("Python 环境已变化，请重新申请检查命令。")
                 command.update(await run_process(command["command"], command["args"], self.project(session["projectId"])["path"], stop,
-                                                 command["timeoutMs"], lambda output: command.update(output)))
+                                                 command["timeoutMs"], lambda output: command.update(output),
+                                                 ssh_password=self.decrypt(command["_sshSecret"]) if command.get("_sshSecret") else None))
                 command["stale"] = self.fingerprint(self.project(session["projectId"])) != command["fingerprint"]
                 if command["command"] in {"node", "python"} and is_behavior_check(command["command"], command["args"]) and command["status"] == "passed" and not command.get("passedTests", 0):
                     command.update(status="failed", error="没有发现测试用例成功执行的证据。")
                 if command["status"] != "passed":
                     session["task"]["metrics"]["failedCommands"] += 1
-                self.record(session, "command_finished", command=command)
+                self.record(session, "command_finished", command=self.public_command(command))
             except Exception as exc:
                 command.update(status="error", error=str(exc)[:500])
             finally:
+                command.pop("_sshSecret", None)
                 self.command_stops.pop(command["id"], None)
                 self.executions.pop(command["id"], None)
                 self.save()
@@ -1366,9 +1435,10 @@ class Workspace:
                 task["rounds"] += 1
                 if stop.is_set():
                     raise AppError("任务已停止。")
-                session["history"].append(answer)
-                self.record(session, "model_response", round=task["rounds"], usage=usage, content=answer["content"], tools=[{"id": c["id"], "name": c["function"]["name"]} for c in answer.get("tool_calls", [])])
-                for call in answer.get("tool_calls", []):
+                safe_answer, ssh_passwords = protected_ssh_answer(answer)
+                session["history"].append(safe_answer)
+                self.record(session, "model_response", round=task["rounds"], usage=usage, content=safe_answer["content"], tools=[{"id": c["id"], "name": c["function"]["name"]} for c in safe_answer.get("tool_calls", [])])
+                for call in safe_answer.get("tool_calls", []):
                     if stop.is_set():
                         raise AppError("任务已停止。")
                     if any(s["status"] == "pending" for s in task.get("supplements", [])):
@@ -1391,10 +1461,13 @@ class Workspace:
                         args = json.loads(call["function"].get("arguments") or "{}")
                         if not isinstance(args, dict):
                             raise AppError("工具参数须为 JSON 对象。")
-                        key = guard.key(name, args, lambda path: self.safe_path(self.project(session["projectId"]), path))
+                        if call["id"] in ssh_passwords:
+                            args["password"] = ssh_passwords[call["id"]]
+                        safe_args = {k: v for k, v in args.items() if k != "password"} if name == "run_command" else args
+                        key = guard.key(name, safe_args, lambda path: self.safe_path(self.project(session["projectId"]), path))
                         guard.before(name, key)
                         event["detail"] = str(next((args[k] for k in ["path", "query", "purpose", "next_action", "question", "reason"] if args.get(k)), ""))[:200]
-                        self.record(session, "tool_started", id=call["id"], name=name, args=args)
+                        self.record(session, "tool_started", id=call["id"], name=name, args=safe_args)
                         output = await self.execute(session, name, args, stop)
                         if isinstance(output, dict) and output.get("error"):
                             failure = guard.failed(name, key, output["error"])
@@ -1493,6 +1566,7 @@ class Workspace:
             self.launch_command(session, command)
         else:
             command.update(status="denied", error="用户拒绝执行，请调整方案。")
+            command.pop("_sshSecret", None)
         session["history"].append({"role": "user", "content": f"Command approval feedback: {command_id} {action}. Inspect command_result."})
         self.record(session, "command_decision", commandId=command_id, action=action)
         self.save()

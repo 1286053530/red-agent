@@ -179,7 +179,7 @@
     "type": "function",
     "function": {
       "name": "run_command",
-      "description": "Run project verification: node --test/--check, npm test/run test/build/lint/typecheck/check, python -m pytest [relative paths/selectors] [-q/-v/-x/-k expr/-m marker/-c config/--ignore path/--tb=short/--maxfail=N/--collect-only], python -m unittest discover [-s dir/-t dir/-p pattern/-v/-q/-f/-b], python -m py_compile files, or python relative_script.py [args]. Uses project .venv/venv, configured SHUJIN_PROJECT_PYTHON or available Python. May await approval. Observe actual exit via command_result. Only real pytest/unittest successes count as Python behavior tests; syntax, scripts, collection and all-skipped runs do not. No shell, pip, installs or arbitrary modules.",
+      "description": "Run supervised commands from the local execution environment: Node/npm/Python project checks, or ssh [-p port] user@host 'remote command'. SSH uses this computer's OpenSSH, known_hosts, config and agent/key; an optional password uses one-shot Python SSH without app SSH setup. Never put a password in args or remote command; use the password field only when the user supplied it. SSH may await approval and its result must be read with command_result. Local source changes still require behavioral tests and review_diff. No local shell, pip, installs or arbitrary modules.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -188,7 +188,8 @@
             "enum": [
               "node",
               "npm",
-              "python"
+              "python",
+              "ssh"
             ]
           },
           "args": {
@@ -200,6 +201,10 @@
           "purpose": {
             "type": "string",
             "description": "What user acceptance criterion this validates"
+          },
+          "password": {
+            "type": "string",
+            "description": "Optional one-time SSH password explicitly supplied by the user. Never include it in args, purpose or remote command. Encrypted only while pending/executing; hidden from command history and results."
           },
           "timeout_ms": {
             "type": "integer",

@@ -65,6 +65,7 @@ app.whenReady().then(async () => {
     const {stdout}=await promisify(execFile)(executable,[...(packaged?[]:['-m','backend']),'--self-test','--self-test-python'],{cwd:resolve('.'),windowsHide:true,
       env:{...process.env,PYTHONUTF8:'1',SHUJIN_PROJECT_PYTHON:resolve('.venv/Scripts/python.exe'),SHUJIN_NODE_EXEC:process.execPath,SHUJIN_NODE_IS_ELECTRON:'1'}});
     assert.equal(JSON.parse(stdout.trim()).passed,true);
+    assert.equal(JSON.parse(stdout.trim()).sshRuntime,true);
     assert.deepEqual(JSON.parse(stdout.trim()).python,{failedExitCode:1,unittestPassed:1,pytestPassed:1});
     assert.equal(JSON.parse(stdout.trim()).skill.digest,skill.digest);
     const stopped=await backend.stop();assert.equal(stopped.code,0);
