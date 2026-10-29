@@ -17,6 +17,7 @@ from .common import AppError, digest, dumps, now, uid
 from .model import TOOLS, call_model, validate_reasoning_effort, reasoning_efforts
 from .images import validate_images, image_content
 from .runtime import bounded_history, run_process, validate_command
+from .git_info import current_branch
 from .python_checks import is_behavior_check, python_check, python_environment
 from .skill_catalog import SkillCatalog, DEFAULT_SKILL, task_skill_context, task_workflow
 from .source_reader import source_page, search_source
@@ -316,6 +317,14 @@ class Workspace:
         raise AppError(label + "不存在。", 404)
 
     def state(self):
+        changed = False
+        for project in self.data["projects"]:
+            branch = current_branch(project["path"])
+            if project.get("gitBranch") != branch:
+                project["gitBranch"] = branch
+                changed = True
+        if changed:
+            self.save()
         return {"accessPolicy": copy.deepcopy(ACCESS_POLICY), "skills": self.skills.list(), "projects": copy.deepcopy(self.data["projects"]), "providers": [self.public_provider(p) for p in self.data["providers"]],
                 "sessions": [{**{k: s[k] for k in ["id", "projectId", "title", "status", "updatedAt", "providerId"]}, "archivedAt": s.get("archivedAt")} for s in self.data["sessions"]]}
 
@@ -329,8 +338,12 @@ class Workspace:
             raise AppError("不能导入敏感配置或工作台数据目录。", 403)
         for project in self.data["projects"]:
             if os.path.normcase(project["path"]) == os.path.normcase(str(root)):
+                branch = current_branch(root)
+                if project.get("gitBranch") != branch:
+                    project["gitBranch"] = branch
+                    self.save()
                 return project
-        project = {"id": uid(), "name": root.name, "path": str(root), "createdAt": now()}
+        project = {"id": uid(), "name": root.name, "path": str(root), "gitBranch": current_branch(root), "createdAt": now()}
         self.data["projects"].insert(0, project)
         self.save()
         return project
@@ -389,7 +402,8 @@ class Workspace:
         return self.public_provider(provider)
 
     def create_session(self, data):
-        self.project(data.get("projectId"))
+        project = self.project(data.get("projectId"))
+        project["gitBranch"] = current_branch(project["path"])
         session = {"id": uid(), "projectId": data["projectId"], "providerId": data.get("providerId", ""), "title": "新开发会话", "updatedAt": now(),
                    "status": "idle", "messages": [], "history": [], "changes": [], "events": [], "commands": [], "observations": {}, "error": ""}
         self.data["sessions"].insert(0, session)
@@ -1166,6 +1180,10 @@ class Workspace:
         permissions = task_permissions(kind, requested_permissions)
         skill_id = data.get("skillId", "auto")
         self.skills.validate_selection(skill_id)
+        project = self.project(session["projectId"])
+        branch = current_branch(project["path"])
+        if project.get("gitBranch") != branch:
+            project["gitBranch"] = branch
         session.update(providerId=provider["id"], error="")
         if not session["messages"]:
             session["title"] = message.strip()[:30]
@@ -1174,7 +1192,7 @@ class Workspace:
         session["task"] = {"id": uid(), "goal": message.strip(), "acceptance": str(data.get("acceptance") or message)[:4000], "kind": kind,
                            "requestedKind": data.get("kind") if data.get("kind") in ("inspect", "change") else "auto", "reasoningEffort": effort,
                            "permissions": permissions, "requestedPermissions": requested_permissions,
-                           "accessScope": {"policyVersion": ACCESS_POLICY["version"], "root": self.project(session["projectId"])["path"], "model": {k: provider[k] for k in ("baseUrl", "model", "protocol")}}, "phase": "classify", "revision": 0,
+                           "accessScope": {"policyVersion": ACCESS_POLICY["version"], "root": project["path"], "gitBranch": branch, "model": {k: provider[k] for k in ("baseUrl", "model", "protocol")}}, "phase": "classify", "revision": 0,
                            "rounds": 0, "calls": 0, "startedAt": now(), "metrics": {"inputTokens": 0, "outputTokens": 0, "modelMs": 0, "failedCommands": 0, "interventions": 0}}
         session["task"]["_skillId"] = skill_id
         session["task"]["skillSelection"] = skill_id
@@ -1242,7 +1260,7 @@ class Workspace:
             self.validate_checkpoint_evidence(session)
             self.record(session, "task_recovered", placeholderTaskId=placeholder["id"], reason="legacy continuation placeholder")
         if not task.get("accessScope"):
-            task["accessScope"] = {"policyVersion": ACCESS_POLICY["version"], "root": self.project(session["projectId"])["path"], "model": {k: provider[k] for k in ("baseUrl", "model", "protocol")}}
+            task["accessScope"] = {"policyVersion": ACCESS_POLICY["version"], "root": self.project(session["projectId"])["path"], "gitBranch": self.project(session["projectId"]).get("gitBranch"), "model": {k: provider[k] for k in ("baseUrl", "model", "protocol")}}
         if session["status"] in {"failed", "stopped", "awaiting_user"}:
             if task.get("outcome"):
                 task["attempts"] = [*task.get("attempts", [])[-9:], task["outcome"]]

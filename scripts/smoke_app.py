@@ -193,10 +193,15 @@ async def main():
                 await page.locator('#devModelSelect').select_option(provider['id'])
                 await page.locator('#devModelPicker > summary').click()
                 await page.locator('#devReasoningSelect').select_option('max')
-                await page.wait_for_function("document.querySelector('#devReasoningHint').textContent.includes('自动保存')")
+                await page.wait_for_function("""async providerId => {
+                    const state=await fetch('/api/dev/state').then(r=>r.json());
+                    return state.providers.find(provider=>provider.id===providerId)?.reasoningEffort==='max';
+                }""", arg=provider['id'])
                 await page.reload()
+                await page.wait_for_function("providerId => document.querySelector('#devModelSelect').value===providerId", arg=provider['id'])
                 await page.locator('#devModelPicker > summary').click()
-                assert await page.locator('#devReasoningSelect').input_value() == 'max'
+                selected_reasoning = await page.locator('#devReasoningSelect').input_value()
+                assert selected_reasoning == 'max', selected_reasoning
                 assert await page.locator('#devReasoningSelect').is_enabled()
                 await page.evaluate("window.close()")
                 code = await asyncio.to_thread(process.wait, 15)

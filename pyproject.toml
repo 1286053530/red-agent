@@ -1,6 +1,6 @@
 [project]
 name = "xiaozhu-shujin-backend"
-version = "2.1.52"
+version = "2.1.54"
 description = "Python backend for 筱竹书瑾"
 requires-python = ">=3.10"
 dynamic = ["dependencies"]

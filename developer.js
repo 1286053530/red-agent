@@ -290,8 +290,8 @@
   function renderProjects() {
     renderProjectGroups();
     const project = activeProject();
-    $('#devProjectMeta').textContent = project ? project.path : '项目文件留在本机';
-    $('#devProjectMeta').title = project ? project.path : '项目文件留在本机';
+    $('#devProjectMeta').textContent = project ? project.path + (project.gitBranch ? ' · Git: ' + project.gitBranch : '') : '项目文件留在本机';
+    $('#devProjectMeta').title = project ? project.path + (project.gitBranch ? ' · 当前分支：' + project.gitBranch : '') : '项目文件留在本机';
     $('#devAgentProjectName').textContent = project?.name || '尚未选择项目';
     $('#devConversationTitle').textContent = state.session?.title || (project ? '新开发会话' : '开发 Agent');
     $('#devConversationTitle').title = $('#devConversationTitle').textContent;
@@ -458,7 +458,7 @@
   function accessScopeHtml(scope, policy) {
     if (!policy) return '<p>正在读取后端权限范围…</p>';
     const labels={directories:'目录',commands:'命令',network:'联网',sensitive:'敏感配置',process:'进程执行范围'};
-    return `<p>项目目录：${escapeHtml(scope?.root || '尚未选择项目')}</p><p>模型数据发送地址：${escapeHtml(scope?.model?.baseUrl || '尚未选择模型')}</p>${Object.entries(labels).map(([key,label])=>`<p><b>${label}：</b>${escapeHtml(policy[key])}</p>`).join('')}`;
+    return `<p>项目目录：${escapeHtml(scope?.root || '尚未选择项目')}</p><p>当前 Git 分支：${escapeHtml(scope?.gitBranch || '无 Git 分支或处于 detached HEAD')}</p><p>模型数据发送地址：${escapeHtml(scope?.model?.baseUrl || '尚未选择模型')}</p>${Object.entries(labels).map(([key,label])=>`<p><b>${label}：</b>${escapeHtml(policy[key])}</p>`).join('')}`;
   }
   function renderAccessPolicy() {
     const project=state.projects.find(p=>p.id===state.projectId), provider=state.providers.find(p=>p.id===$('#devModelSelect').value);
