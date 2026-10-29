@@ -302,7 +302,7 @@
     "type": "function",
     "function": {
       "name": "request_user",
-      "description": "Pause only when a concrete user answer or choice is required. State the specific question, why existing tools cannot resolve it, and optional completed work. This is waiting for user, never completion.",
+      "description": "Call immediately when a material requirement, fact, scope, preference, or consequence cannot be reliably established with available project evidence/tools, when evidence conflicts, or when a user choice is required. Pause dependent actions; do not guess or defer the question. State confirmed facts, the specific unresolved point and impact, why tools cannot resolve it, and optional independent work already completed. This waits for the user and is never completion.",
       "parameters": {
         "type": "object",
         "properties": {

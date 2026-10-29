@@ -4,8 +4,19 @@ import httpx
 import pytest
 
 from backend.common import now
+from backend.model import TOOLS
 from backend.workspace import SYSTEM, Workspace, task_kind
 from conftest import ROOT, prepare, settle, tool_call
+
+
+def test_uncertainty_confirmation_policy_is_loaded_for_every_task():
+    base = (ROOT / "backend/BASE.md").read_text(encoding="utf-8")
+    request_user = next(tool["function"] for tool in TOOLS if tool["function"]["name"] == "request_user")
+    assert "不猜测、不擅自采用假设，也不拖到总结阶段" in base
+    assert "遇到时暂停" in base
+    assert "遇到时暂停" in SYSTEM
+    assert "Call immediately" in request_user["description"]
+    assert "do not guess or defer" in request_user["description"]
 
 
 @pytest.mark.parametrize("message,requested,expected", [
