@@ -3,20 +3,59 @@ import json
 import httpx
 import pytest
 
-from backend.common import now
+from backend.common import AppError, now
 from backend.model import TOOLS
 from backend.workspace import SYSTEM, Workspace, task_kind
 from conftest import ROOT, prepare, settle, tool_call
 
 
-def test_uncertainty_confirmation_policy_is_loaded_for_every_task():
+def test_analysis_answers_without_redundant_confirmation_policy():
     base = (ROOT / "backend/BASE.md").read_text(encoding="utf-8")
     request_user = next(tool["function"] for tool in TOOLS if tool["function"]["name"] == "request_user")
-    assert "不猜测、不擅自采用假设，也不拖到总结阶段" in base
-    assert "遇到时暂停" in base
-    assert "遇到时暂停" in SYSTEM
-    assert "Call immediately" in request_user["description"]
-    assert "do not guess or defer" in request_user["description"]
+    assert "工具和调查范围由 Agent 自行选择" in base
+    assert "只有缺少用户独有的信息" in base
+    assert "当前版本号或提交号" in SYSTEM
+    assert "never ask whether to continue" in request_user["description"]
+    assert "user-held information" in request_user["description"]
+
+
+@pytest.mark.parametrize("question", [
+    "是否需要我继续核实后端与存量引用校验？",
+    "需要我用什么工具继续检查？",
+    "请补充截图环境对应的版本号或提交号？",
+])
+async def test_read_only_analysis_rejects_redundant_confirmation(workspace, question):
+    w, _, provider, session = workspace
+    await prepare(w, provider, session, message="分析维度下拉框是否合理", kind="inspect")
+    with pytest.raises(AppError, match="只读分析不需要用户确认"):
+        await w.execute(session, "request_user", {"question": question, "reason": "需要确认"})
+    assert session["status"] != "awaiting_user"
+    assert session["task"]["metrics"]["interventions"] == 0
+
+
+async def test_analysis_recovers_from_redundant_question_and_delivers(workspace):
+    w, _, provider, session = workspace
+    steps = [
+        ("update_plan", {"summary": "分析字段筛选", "criteria": "交付代码依据", "next_action": "读取入口"}),
+        ("read_file", {"path": "app.mjs"}),
+        ("request_user", {"question": "是否需要我继续核实？", "reason": "确认下一步"}),
+        ("finish_task", {"summary": "当前入口使用减法，筛选问题需结合真实字段代码判断。",
+                         "evidence": "已读取 app.mjs；静态分析，未运行项目代码。"}),
+    ]
+    async def handler(request):
+        body = json.loads(request.content)
+        name, args = steps.pop(0)
+        if name == "finish_task":
+            assert "只读分析不需要用户确认" in str(body["messages"])
+            assert "unnecessary_confirmation" in str(body["messages"])
+        return httpx.Response(200, json={"choices": [{"message": {"tool_calls": [tool_call(name, args)]}}]})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        w.model_client = client
+        await w.start_run(session["id"], {"providerId": provider["id"], "message": "分析字段筛选", "kind": "inspect", "skillId": "none"})
+        await settle(w)
+    assert session["status"] == "completed", session["error"]
+    assert session["task"]["metrics"]["interventions"] == 0
+    assert not steps
 
 
 @pytest.mark.parametrize("message,requested,expected", [

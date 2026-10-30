@@ -37,6 +37,29 @@
   const composerFooter = $('.dev-composer-bottom');
   $('#devPrompt').insertAdjacentHTML('beforebegin', '<div id="devImageDrafts" class="dev-image-drafts hidden" aria-label="待发送的图片"></div>');
   root.insertAdjacentHTML('beforeend', '<dialog id="devImageViewer" class="dev-image-viewer" aria-label="查看图片"><form method="dialog"><button aria-label="关闭图片">×</button></form><img alt=""></dialog>');
+  root.insertAdjacentHTML('beforeend', '<dialog id="devConfirmationDialog" class="dev-confirmation-dialog" aria-labelledby="devConfirmationTitle" aria-describedby="devConfirmationQuestion"><form id="devConfirmationForm"><h2 id="devConfirmationTitle">任务需要你确认</h2><p id="devConfirmationReason" class="dev-confirmation-reason"></p><p id="devConfirmationQuestion" class="dev-confirmation-question"></p><p id="devConfirmationSummary" class="dev-confirmation-summary hidden"></p><label for="devConfirmationAnswer">你的回答</label><textarea id="devConfirmationAnswer" rows="4" maxlength="16000" required placeholder="在这里回答，提交后继续同一任务"></textarea><p id="devConfirmationError" class="dev-inline-error hidden" role="alert"></p><div class="dev-confirmation-actions"><button id="devConfirmationLater" type="button" class="secondary-button">稍后回答</button><button id="devConfirmationSubmit" type="submit" class="primary-button">提交并继续</button></div></form></dialog>');
+  const confirmationDialog = $('#devConfirmationDialog');
+  const confirmationDrafts = new Map();
+  let deferredConfirmationKey = '';
+  const confirmationKey = session => session?.status === 'awaiting_user' && session.task?.outcome?.question && !session.archivedAt
+    ? [session.id, session.task.id, session.task.outcome.at, session.task.outcome.question].join(':') : '';
+  function syncConfirmationDialog() {
+    const key = confirmationKey(state.session);
+    if (!key) { if (confirmationDialog.open) confirmationDialog.close(); confirmationDialog.dataset.key = ''; return; }
+    if (confirmationDialog.dataset.key !== key) {
+      confirmationDialog.dataset.key = key;
+      const outcome = state.session.task.outcome;
+      $('#devConfirmationReason').textContent = outcome.reason || '';
+      $('#devConfirmationQuestion').textContent = outcome.question;
+      $('#devConfirmationSummary').textContent = outcome.summary || '';
+      $('#devConfirmationSummary').classList.toggle('hidden', !outcome.summary);
+      $('#devConfirmationAnswer').value = confirmationDrafts.get(key) || '';
+      $('#devConfirmationError').classList.add('hidden');
+    }
+    if (document.body.dataset.view === 'developer' && key !== deferredConfirmationKey && !confirmationDialog.open && !sending) {
+      closeComposerPickers(); confirmationDialog.showModal(); $('#devConfirmationAnswer').focus();
+    }
+  }
   $('#devConversation').addEventListener('click', event => {
     const button = event.target.closest('[data-view-image]');
     if (!button) return;
@@ -116,7 +139,7 @@
   }
   $('.dev-agent-panel').addEventListener('click', event => {
     if (!event.target.closest('#devConversation')) return;
-    if (event.target.closest('[data-result-diff], [data-result-trace]')) return;
+    if (event.target.closest('[data-result-diff], [data-result-trace], [data-result-file-path]')) return;
     if (rightTab !== 'browser' || filesCollapsed) return;
     filesCollapsed = true;
     localStorage.setItem('devFilesCollapsed', '1');
@@ -124,6 +147,34 @@
     document.dispatchEvent(new Event('workspace:right-panel'));
   });
   applyPanelLayout();
+  const fileContextMenu = document.createElement('div');
+  fileContextMenu.className = 'dev-file-context-menu hidden';
+  fileContextMenu.setAttribute('role', 'menu');
+  fileContextMenu.innerHTML = '<button type="button" role="menuitem" data-open-file-folder>在文件夹中显示</button>';
+  document.body.append(fileContextMenu);
+  let contextFilePath = '';
+  function closeFileContextMenu() { fileContextMenu.classList.add('hidden'); contextFilePath = ''; }
+  $('#devFileTree').addEventListener('contextmenu', event => {
+    const row = event.target.closest('[data-file-path]');
+    if (!row) return;
+    event.preventDefault();
+    contextFilePath = row.dataset.filePath;
+    fileContextMenu.classList.toggle('hidden', typeof window.shujinDesktop?.showItemInFolder !== 'function');
+    if (fileContextMenu.classList.contains('hidden')) return;
+    const {innerWidth, innerHeight} = window;
+    fileContextMenu.style.left = Math.min(event.clientX, innerWidth - fileContextMenu.offsetWidth - 8) + 'px';
+    fileContextMenu.style.top = Math.min(event.clientY, innerHeight - fileContextMenu.offsetHeight - 8) + 'px';
+  });
+  document.addEventListener('click', event => { if (!event.target.closest('.dev-file-context-menu')) closeFileContextMenu(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeFileContextMenu(); });
+  fileContextMenu.addEventListener('click', async event => {
+    const item = event.target.closest('[data-open-file-folder]');
+    if (!item || !contextFilePath) return;
+    const path = contextFilePath;
+    closeFileContextMenu();
+    try { await window.shujinDesktop.showItemInFolder(activeProject()?.id, path); }
+    catch (error) { setError(error.message); }
+  });
   const filesTabPanel = document.createElement('section');
   filesTabPanel.id = 'devFilesTabPanel';
   filesTabPanel.className = 'dev-files-tabpanel';
@@ -341,8 +392,8 @@
     $('#devSendButton').setAttribute('aria-label', sendLabel);
     $('#devSendButton').innerHTML = state.busy ? '补充要求' : icon('send');
     $('#devSendButton').classList.toggle('is-supplement', state.busy);
-    $('#devPrompt').placeholder = state.busy ? '随时补充要求，例如“只修改登录页”；下一次模型请求前接收…' : awaiting ? '回答当前问题，继续此任务…' : !state.projectId ? '描述你想完成的开发任务，选择项目后发送…' : ['failed','needs_help','stopped'].includes(state.session?.status) ? '输入“继续”续作当前任务，或描述新任务…' : '描述你想完成的开发任务…';
-    if ($('#devResumeTask')) $('#devResumeTask').disabled = (awaiting && !hasText) || addingImages || sending || creatingSession || !!state.session?.archivedAt;
+    $('#devPrompt').placeholder = state.busy ? '随时补充要求，例如“只修改登录页”；下一次模型请求前接收…' : awaiting ? '任务等待确认，请在弹出的确认框回答…' : !state.projectId ? '描述你想完成的开发任务，选择项目后发送…' : ['failed','needs_help','stopped'].includes(state.session?.status) ? '输入“继续”续作当前任务，或描述新任务…' : '描述你想完成的开发任务…';
+    if ($('#devResumeTask')) $('#devResumeTask').disabled = addingImages || sending || creatingSession || !!state.session?.archivedAt;
     $('#devSendButton').disabled = !hasText || !state.projectId || (!state.busy && !resuming && !$('#devModelSelect').value) || addingImages || sending || reasoningSaving || creatingSession || !!state.session?.archivedAt;
     $('#devSendButton').title = state.busy ? '补充要求：保存后在下一次模型请求前纳入当前任务' : !state.projectId ? (state.projects.length ? '请先选择左侧项目' : '请先导入本地项目') : sendLabel;
     renderModelLabel();
@@ -637,6 +688,35 @@
     renderDirectory('', 0);
     tree.innerHTML = '<div class="dev-tree-label">项目文件</div>' + rows.join('');
   }
+  async function locateProjectFile(path) {
+    const projectId = state.projectId;
+    if (!projectId || typeof path !== 'string' || !path) return;
+    filesCollapsed = false; applyPanelLayout(); selectRightTab('files');
+    const parts = path.split('/');
+    let directory = '';
+    for (let index = 0; index < parts.length; index++) {
+      const name = parts[index];
+      let page = directoryPages.get(directory);
+      while (page && !page.entries.some(entry => entry.name === name) && page.hasMore && projectId === state.projectId) {
+        await loadDirectory(directory, true);
+        page = directoryPages.get(directory);
+      }
+      const entry = page?.entries.find(item => item.name === name);
+      if (!entry) { setError('此文件未出现在当前项目目录中，请刷新文件树后重试。'); return; }
+      if (index === parts.length - 1) {
+        if (entry.type !== 'file') { setError('结果路径不是文件。'); return; }
+        renderFileTree();
+        const row = [...$('#devFileTree').querySelectorAll('[data-file-path]')].find(item => item.dataset.filePath === path);
+        row?.scrollIntoView({block: 'nearest'});
+        await openFile(path);
+        return;
+      }
+      if (entry.type !== 'directory') { setError('结果路径中的目录结构已变化。'); return; }
+      expandedDirectories.add(entry.path);
+      directory = entry.path;
+      if (!directoryPages.has(directory)) await loadDirectory(directory);
+    }
+  }
   function fileSymbol(path) { const ext = path.split('.').at(-1).toLowerCase(); return ({ js: 'JS', mjs: 'JS', ts: 'TS', tsx: 'TS', jsx: 'JS', css: 'CSS', html: '<>', json: '{}', md: 'MD', py: 'PY', go: 'GO', rs: 'RS', vue: 'VUE' })[ext] || '·'; }
   async function openFile(path, more = false, previous = false) {
     const projectId = state.projectId;
@@ -758,7 +838,7 @@
     const verificationWarning = task.kind !== 'inspect' && !verified;
     const applied = changes.some(c => c.status === 'applied');
     const canRevert = applied && session.task?.id === task.id && !state.busy && !session.archivedAt && task.kind === 'change' && changes.some(c => c.status === 'applied' && c.original !== null);
-    const fileRow = file => `<div class="dev-result-file"><span title="${escapeHtml(file.path)}">${escapeHtml(file.path)}</span>${stats(file)}</div>`;
+    const fileRow = file => `<div class="dev-result-file"><button type="button" class="dev-result-file-locate" data-result-file-path="${escapeHtml(file.path)}" title="在右侧目录中定位文件">${escapeHtml(file.path)}</button>${stats(file)}</div>`;
     return `<section class="dev-result-card" aria-label="任务结果卡片" data-result-task="${escapeHtml(task.id)}">
       ${renderResultTopics(task)}
       ${verificationWarning ? '<p class="dev-result-warning">缺少有效的行为测试记录，请核对验证依据。</p>' : ''}
@@ -770,7 +850,7 @@
   }
   function renderExecution() {
     const session=state.session, task=session?.task, target=$('#devExecution');
-    if(!task){target.innerHTML='<div class="dev-trace-empty">开始任务后，这里显示计划、工具调用和执行结果。</div>';return;}
+    if(!task){target.innerHTML='<div class="dev-trace-empty">开始任务后，这里显示计划、工具调用和执行结果。</div>';syncConfirmationDialog();return;}
     const previousDetails = target.dataset.taskId === task.id ? [...target.querySelectorAll('details')].map(detail => detail.open) : [];
     const previousScroll = target.dataset.taskId === task.id ? target.scrollTop : 0;
     target.dataset.taskId = task.id;
@@ -802,11 +882,17 @@
       const outcome = task.outcome;
       target.querySelector('.dev-execution-head').insertAdjacentHTML('afterend', `<section class="dev-task-outcome ${session.status}" id="devTaskOutcome" role="status"><strong>${escapeHtml(statusLabel(session.status))}</strong><p>${escapeHtml(outcome.reason)}</p>${outcome.question?`<p><b>${escapeHtml(outcome.question)}</b></p>`:''}${outcome.evidence?`<p>已有证据：${escapeHtml(outcome.evidence)}</p>`:''}<small>${session.status==='awaiting_user'?'在输入框回答后继续同一任务。':'未计为完成；可查看轨迹、调整后重试。'}</small></section>`);
     }
+    if (session.status === 'awaiting_user' && task.outcome?.question) {
+      $('#devResumeTask').textContent = '打开确认框';
+      $('#devTaskOutcome small').textContent = '请在确认框回答；稍后也可重新打开。';
+    }
     updateSendButton();
     if (session.archivedAt && $('#devResumeTask')) { $('#devResumeTask').disabled = true; $('#devResumeTask').title = '恢复会话后可继续任务'; }
+    syncConfirmationDialog();
   }
   function renderPending() {
     const changes=state.session?.changes || [], pending=changes.filter(c=>c.status==='pending'), target=$('#devPendingChanges');
+    const appliedDetailsOpen=!!target.querySelector('.dev-applied-changes')?.open;
     const card=(c,applied=false)=>{
       const cannotWrite=state.busy||state.session?.task?.kind==='inspect'||!!state.session?.archivedAt;
       const fileId=escapeHtml(c.id);
@@ -825,6 +911,8 @@
         container.innerHTML=`<div class="dev-diff-summary"><span>−${result.deletions} 删除</span><span>+${result.additions} 新增</span><span>${escapeHtml(result.path)}</span></div><pre class="dev-diff-code">${lines.map(line=>`<span class="${line.startsWith('+++')||line.startsWith('---')?'meta':line.startsWith('+')?'added':line.startsWith('-')?'removed':'context'}">${escapeHtml(line||' ')}</span>`).join('\n')}</pre>`;
       }).catch(error=>{container.innerHTML=`<p class="dev-diff-error">${escapeHtml(error.message)}</p>`;details.dataset.loaded='';});
     });
+    const appliedDetails=target.querySelector('.dev-applied-changes');
+    if(appliedDetails)appliedDetails.open=appliedDetailsOpen;
   }
   async function selectProject(projectId, preferredSessionId) {
     if (state.projectId) clearImages();
@@ -880,7 +968,7 @@
     } catch (error) {
       if (sessionId && state.sessionId === sessionId) await loadSession(sessionId).catch(() => {});
       setError(error.message);
-    } finally { sending = false; renderProjects(); updateSendButton(); }
+    } finally { sending = false; renderProjects(); updateSendButton(); syncConfirmationDialog(); }
   }
   async function pollRun(id) {
     const generation = ++pollGeneration; pollingId = id;
@@ -944,6 +1032,10 @@
       }
       return;
     }
+    if (button.hasAttribute('data-result-file-path')) {
+      await locateProjectFile(button.dataset.resultFilePath);
+      return;
+    }
     if (button.id === 'devToggleSidebar') {
       sidebarCollapsed = !sidebarCollapsed;
       localStorage.setItem('devSidebarCollapsed', sidebarCollapsed ? '1' : '0');
@@ -968,7 +1060,7 @@
     if(button.id==='devExportLogs') {
       try {const data=await api(`sessions/${state.sessionId}/logs`);const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='shujin-task-'+state.session.task.id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){setError(error.message);}return;
     }
-    if(button.id==='devResumeTask' && state.session?.status==='awaiting_user') { await sendMessage($('#devPrompt').value); return; }
+    if(button.id==='devResumeTask' && confirmationKey(state.session)) { deferredConfirmationKey = ''; syncConfirmationDialog(); return; }
     if(button.id==='devResumeTask'||button.hasAttribute('data-command-action')) {
       const resuming = button.id==='devResumeTask';
       if (resuming && (sending || creatingSession || addingImages)) return;
@@ -983,7 +1075,7 @@
         if(resuming){$('#devPrompt').value='';clearImages();updateSendButton();}
         await loadSession(sessionId);setError('');
       }catch(error){setError(error.message);button.disabled=false;}
-      finally{if(resuming){sending=false;renderProjects();updateSendButton();}}return;
+      finally{if(resuming){sending=false;renderProjects();updateSendButton();syncConfirmationDialog();}}return;
     }
     if (button.id === 'devImportButton' || button.id === 'devEmptyImport') { await importProject(); return; }
     if (button.id === 'devRefreshFiles') { await loadFiles(); return; }
@@ -1040,6 +1132,42 @@
     if (event.target.id === 'devReasoningSelect') void saveReasoningEffort(event.target.value);
   });
   $('#devComposer').addEventListener('submit', event => { event.preventDefault(); void sendMessage($('#devPrompt').value); });
+  $('#devConfirmationAnswer').addEventListener('input', event => {
+    confirmationDrafts.set(confirmationDialog.dataset.key, event.target.value);
+    $('#devConfirmationError').classList.add('hidden');
+  });
+  $('#devConfirmationLater').addEventListener('click', () => { deferredConfirmationKey = confirmationDialog.dataset.key; confirmationDialog.close(); });
+  confirmationDialog.addEventListener('close', () => {
+    if (confirmationDialog.dataset.key === confirmationKey(state.session)) deferredConfirmationKey = confirmationDialog.dataset.key;
+  });
+  $('#devConfirmationForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const answer = $('#devConfirmationAnswer').value.trim();
+    const key = confirmationDialog.dataset.key, sessionId = state.sessionId;
+    if (!answer) {
+      $('#devConfirmationError').textContent = '请填写回答，或选择“稍后回答”。';
+      $('#devConfirmationError').classList.remove('hidden');
+      $('#devConfirmationAnswer').focus();
+      return;
+    }
+    if (!key || key !== confirmationKey(state.session) || sending) return;
+    const submit = $('#devConfirmationSubmit');
+    sending = true; submit.disabled = true; submit.textContent = '提交中…'; renderProjects();
+    try {
+      await api('sessions/' + encodeURIComponent(sessionId) + '/resume', {feedback: answer});
+      confirmationDrafts.delete(key);
+      if (state.sessionId === sessionId) {
+        confirmationDialog.close();
+        await loadSession(sessionId);
+        setError('');
+      }
+    } catch (error) {
+      $('#devConfirmationError').textContent = error.message;
+      $('#devConfirmationError').classList.remove('hidden');
+    } finally {
+      sending = false; submit.disabled = false; submit.textContent = '提交并继续'; renderProjects(); updateSendButton(); syncConfirmationDialog();
+    }
+  });
   $('#devPrompt').addEventListener('input', updateSendButton);
   let promptWidth = 0;
   const promptObserver = new ResizeObserver(([entry]) => {
@@ -1069,7 +1197,7 @@
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     }
   });
-  document.addEventListener('workspace:view', event => { placeSidebarToggle(event.detail); if (event.detail === 'developer') void loadState(); });
+  document.addEventListener('workspace:view', event => { placeSidebarToggle(event.detail); if (event.detail === 'developer') void loadState(); else if (confirmationDialog.open) confirmationDialog.close(); });
   let refreshingSessions = false;
   setInterval(async () => {
     if (refreshingSessions || document.hidden || !state.sessions.some(s => s.status === 'running')) return;

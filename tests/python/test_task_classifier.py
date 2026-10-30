@@ -9,6 +9,46 @@ from backend.workspace import Workspace
 from conftest import settle, tool_call
 
 
+async def test_classification_accepts_response_after_old_thirty_second_deadline(workspace):
+    w, _, provider, _ = workspace
+    w.intent_classifier = None
+
+    async def handler(request):
+        await asyncio.sleep(30.2)
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({
+            "type": "chat", "reply": "已收到"
+        })}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        w.model_client = client
+        intent = await w.classify_intent(provider, {"role": "user", "content": "你好"}, asyncio.Event())
+    assert intent["type"] == "chat" and intent["reply"] == "已收到"
+
+
+async def test_classification_retries_timeout_and_gateway_failures(workspace, monkeypatch):
+    from backend import model
+    w, _, provider, _ = workspace
+    w.intent_classifier = None
+    monkeypatch.setattr(model, "MODEL_RETRY_DELAYS", (0, 0, 0, 0))
+    bodies = []
+
+    async def handler(request):
+        bodies.append(request.content)
+        if len(bodies) <= 2:
+            raise httpx.ReadTimeout("slow response", request=request)
+        if len(bodies) <= 4:
+            return httpx.Response(503)
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({
+            "type": "development", "kind": "change"
+        })}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        w.model_client = client
+        intent = await w.classify_intent(provider, {"role": "user", "content": "生成文档"}, asyncio.Event())
+    assert intent["type"] == "development" and intent["kind"] == "change"
+    assert len(bodies) == 5 and all(body == bodies[0] for body in bodies)
+
+
 async def test_new_conversation_classifies_greeting_without_tools_or_project_reads(tmp_path):
     project = tmp_path / "project"
     project.mkdir()

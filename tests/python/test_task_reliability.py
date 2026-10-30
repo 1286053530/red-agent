@@ -3,7 +3,7 @@ from pathlib import Path
 
 import httpx
 import pytest
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, expect
 
 from backend.common import AppError
 from backend.workspace import Workspace
@@ -136,7 +136,7 @@ async def test_resume_reuses_checkpoint_evidence_and_todo(workspace):
     async def resume_handler(request):
         body = json.loads(request.content)
         requests.append(body)
-        return httpx.Response(200, json={'choices': [{'message': {'tool_calls': [tool_call('request_user', {'reason': '用例在此结束', 'question': '是否继续？'})]}}]})
+        return httpx.Response(200, json={'choices': [{'message': {'tool_calls': [tool_call('request_user', {'reason': '项目中不存在外部接口契约', 'question': '请提供需要对照的外部接口契约？'})]}}]})
     async with httpx.AsyncClient(transport=httpx.MockTransport(resume_handler)) as client:
         w.model_client = client
         await w.resume_run(session['id'])
@@ -283,14 +283,29 @@ async def test_waiting_ui_answers_without_creating_new_task(live_server, workspa
                 await page.locator(f'[data-session-id="{session["id"]}"]').click()
                 await page.locator('#devTaskOutcome').wait_for()
                 assert '等待用户回答' in await page.locator('#devAgentStatus').inner_text()
-                assert await page.locator('#devResumeTask').is_disabled()
+                await expect(page.locator('#devConfirmationDialog')).to_be_visible()
+                await expect(page.locator('#devConfirmationQuestion')).to_have_text('请确定审查范围')
+                await expect(page.locator('#devResumeTask')).to_have_text('打开确认框')
                 assert not await page.locator('#devError').is_visible()
-                await page.fill('#devPrompt', '只看加法')
+                await page.fill('#devConfirmationAnswer', '只看加法')
+                await page.locator('#devConfirmationLater').click()
+                await expect(page.locator('#devConfirmationDialog')).not_to_be_visible()
+                await page.fill('#devPrompt', '保留主输入草稿')
+                await page.locator('#devResumeTask').click()
+                await expect(page.locator('#devConfirmationAnswer')).to_have_value('只看加法')
+                await page.fill('#devConfirmationAnswer', '   ')
+                await page.locator('#devConfirmationSubmit').click()
+                await expect(page.locator('#devConfirmationError')).to_be_visible()
+                await expect(page.locator('#devConfirmationDialog')).to_be_visible()
+                await page.fill('#devConfirmationAnswer', '只看加法')
+                await expect(page.locator('#devConfirmationError')).not_to_be_visible()
                 output = ROOT / '.local/reliability-check'
                 output.mkdir(parents=True, exist_ok=True)
                 await page.screenshot(path=str(output / 'waiting-user.png'))
-                await page.get_by_role('button', name='回答并继续', exact=True).click()
+                await page.locator('#devConfirmationSubmit').click()
                 await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='已完成'")
+                await expect(page.locator('#devConfirmationDialog')).not_to_be_visible()
+                await expect(page.locator('#devPrompt')).to_have_value('保留主输入草稿')
                 assert session['task']['id'] == task_id and not session.get('tasks')
                 assert session['task']['kind'] == 'inspect'
                 assert await page.locator('#devTaskOutcome').count() == 0
@@ -304,6 +319,7 @@ async def test_waiting_ui_answers_without_creating_new_task(live_server, workspa
                 steps.append(('request_user', {'reason': '需要范围选择', 'question': '选择哪个模块？'}))
                 await page.get_by_role('button', name='重试当前任务', exact=True).click()
                 await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='等待用户回答'")
+                await expect(page.locator('#devConfirmationDialog')).to_be_visible()
                 assert session['task']['id'] == failed_id
             finally:
                 await browser.close()

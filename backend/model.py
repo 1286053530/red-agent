@@ -10,6 +10,7 @@ from .common import AppError, dumps
 
 MODEL_REQUEST_ATTEMPTS = 5
 MODEL_RETRY_DELAYS = (1, 2, 3, 4)
+MODEL_RESPONSE_TIMEOUT = 600
 RETRYABLE_HTTP_STATUSES = {502, 503, 504}
 ANTHROPIC_THINKING_BUDGETS = {"low": 1024, "medium": 4096, "high": 8192}
 
@@ -199,12 +200,12 @@ async def call_model(provider, messages, stop=None, client=None, *, include_tool
                 body["reasoning_effort"] = effort
     endpoint = provider["baseUrl"].rstrip("/") + ("/messages" if anthropic else "/responses" if responses else "/chat/completions")
     own_client = client is None
-    client = client or httpx.AsyncClient(timeout=120, follow_redirects=False)
+    client = client or httpx.AsyncClient(timeout=httpx.Timeout(30, read=MODEL_RESPONSE_TIMEOUT), follow_redirects=False)
     try:
         request = post_with_retries(client, endpoint, headers, body, stop or asyncio.Event(), attempts)
         response = await asyncio.wait_for(request, request_timeout) if request_timeout else await request
         if not response.is_success:
-            description = {400: "模型拒绝请求，请检查接口协议及模型的图片与工具调用能力", 401: "API Key 无效或已过期", 403: "模型或接口无访问权限", 404: "接口路径或模型不存在", 422: "模型请求格式不受支持，请检查接口协议", 429: "请求限流或账户额度不足"}.get(response.status_code, "模型服务请求失败")
+            description = {400: "模型拒绝请求，请检查接口协议及模型的图片与工具调用能力", 401: "API Key 无效或已过期", 402: "模型服务账户余额或额度不足，请检查所选服务商账户", 403: "模型或接口无访问权限", 404: "接口路径或模型不存在", 422: "模型请求格式不受支持，请检查接口协议", 429: "请求限流或账户额度不足"}.get(response.status_code, "模型服务请求失败")
             detail = model_error_detail(response, provider.get("apiKey", ""))
             if detail:
                 description += "；服务端详情：" + detail

@@ -87,6 +87,8 @@ async def test_running_task_keeps_editable_draft(workspace, live_server, transit
             else:
                 release_model.set()
                 await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='等待用户回答'")
+                await expect(page.locator('#devConfirmationDialog')).to_be_visible()
+                await page.locator('#devConfirmationLater').click()
             assert await prompt.input_value() == draft
             assert await page.locator('#devImageDrafts img').count() == 1
             await page.locator('#devModelPicker > summary').click()
@@ -162,6 +164,8 @@ async def test_composer_draft_without_selected_project(workspace, live_server):
             assert len(w.data['sessions']) == 2
             await expect(prompt).to_be_enabled()
             assert await prompt.input_value() == ''
+            await expect(page.locator('#devConfirmationDialog')).to_be_visible()
+            await page.locator('#devConfirmationLater').click()
             await page.locator('.dev-archived-sessions>summary').click()
             await page.locator(f'[data-session-id="{session["id"]}"]').click()
             await expect(prompt).to_be_disabled()

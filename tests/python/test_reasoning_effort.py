@@ -230,6 +230,8 @@ async def test_reasoning_menu_persistence_protocols_and_real_request(workspace, 
             await page.locator('#devPrompt').fill('检查项目')
             await page.locator('#devSendButton').click()
             await page.wait_for_function("document.querySelector('#devAgentStatus').textContent==='等待用户回答'")
+            await expect(page.locator('#devConfirmationDialog')).to_be_visible()
+            await page.locator('#devConfirmationLater').click()
             await page.locator('#devModelPicker > summary').click()
             await expect(page.locator('#devReasoningSelect')).to_be_disabled()
             await expect(page.locator('#devReasoningHint')).to_contain_text('沿用启动时')

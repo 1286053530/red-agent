@@ -9,6 +9,8 @@ READ_TOOLS = {"read_file", "list_files", "search_files", "read_skill_resource"}
 
 def recovery(error, name=""):
     text = str(error)
+    if name == "request_user" and "只读分析不需要用户确认" in text:
+        return "unnecessary_confirmation", "自行选择工具并调查当前项目；能回答的部分直接 finish_task，证据差异和未知点写进结论，不再要求用户确认是否继续或提供可查的版本。"
     if isinstance(error, FileNotFoundError) or "不存在" in text:
         return "not_found", "先用 list_files 展开相关目录或 search_files 定位真实路径，再读取；不要原样重试不存在的路径。"
     if isinstance(error, (ValueError, TypeError, KeyError)) or "参数" in text or "分页" in text or "范围无效" in text:

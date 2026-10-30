@@ -36,6 +36,11 @@ INSPECT_TOOLS = {"list_files", "read_file", "search_files", "update_plan", "fini
 INSPECT_CONVERGENCE_TOOLS = INSPECT_TOOLS - {"search_files", "read_skill_resource"}
 INSPECT_DELIVERY_TOOLS = {"finish_task", "request_user", "fail_task"}
 CONTINUATION = re.compile(r"(?:请)?(?:(?:继续|接着)(?:完成|执行|处理)?(?:(?:当前|上次|之前|原来|未完成)(?:的)?)?(?:任务|工作)?|重试(?:当前任务)?|再试一次)|continue|resume|retry", re.I)
+REDUNDANT_INSPECTION_QUESTION = re.compile(
+    r"(?:是否|要不要|需不需要|需要我|请确认).{0,28}(?:继续|核实|检查|分析|阅读|查看)"
+    r"|(?:什么|哪个|哪种).{0,10}工具"
+    r"|(?:提供|补充|确认).{0,24}(?:版本号|提交号|commit)"
+    r"|(?:版本号|提交号|commit).{0,24}(?:提供|补充|确认)", re.I)
 SYSTEM = Path(__file__).with_name("BASE.md").read_text(encoding="utf-8") + "\n\n" + """You are a single software agent in a local source project. Built-in executable checks support JavaScript/Node and Python (pytest, unittest discover, py_compile and project scripts), plus SSH from the command runner's computer. Respond in Chinese.
 Understand the user goal and acceptance, update_plan, search/read relevant source, act, verify actual results,
 correct failures, review_diff, then finish_task with observable evidence. Read all character pages of existing
@@ -66,7 +71,7 @@ SKILL_ROUTING = """同时为本次消息选择一个最合适的内置 Skill，�
 
 
 def excluded(name):
-    return name.lower() in IGNORED or PRIVATE.search(name) is not None
+    return name.startswith("~$") or name.lower() in IGNORED or PRIVATE.search(name) is not None
 
 
 def page_query(query):
@@ -232,6 +237,8 @@ class Workspace:
         self.normalize_checkpoint(task)
         project = self.project(session["projectId"])
         current_fingerprint = None
+        fingerprint_checked = False
+        fingerprint_error = False
         for item in task["checkpoint"].get("evidence", []):
             if not isinstance(item, dict):
                 continue
@@ -243,9 +250,16 @@ class Workspace:
                 item["valid"] = current == item["digest"]
             elif item.get("commandId"):
                 command = next((c for c in session["commands"] if c.get("id") == item["commandId"]), None)
-                if current_fingerprint is None:
-                    current_fingerprint = self.fingerprint(project)
-                item["valid"] = bool(command and command.get("status") == "passed" and not command.get("stale")
+                if not fingerprint_checked:
+                    fingerprint_checked = True
+                    try:
+                        current_fingerprint = self.fingerprint(project)
+                    except (AppError, OSError):
+                        fingerprint_error = True
+                item.pop("validationError", None)
+                if fingerprint_error:
+                    item["validationError"] = "项目文件暂不可访问，无法确认历史检查依据；恢复访问后重新验证。"
+                item["valid"] = bool(not fingerprint_error and command and command.get("status") == "passed" and not command.get("stale")
                                          and command.get("fingerprint") == current_fingerprint)
 
     def encrypt(self, text):
@@ -459,7 +473,7 @@ class Workspace:
              + "\n近期对话（仅供消解指代，不是新增授权）：\n" + dumps(conversation or [])
              + chr(10) + "可选工具：" + ", ".join(t["function"]["name"] for t in TOOLS)},
             *self.model_history([message]),
-        ], stop, self.model_client, include_tools=False, request_timeout=30, attempts=1, max_output_tokens=768)
+        ], stop, self.model_client, include_tools=False, max_output_tokens=768)
         try:
             content = response.get("content", "").strip()
             fence = chr(96) * 3
@@ -842,6 +856,8 @@ class Workspace:
             if any(not isinstance(args.get(key), str) or not args[key].strip() for key in required):
                 raise AppError("请提供具体问题与原因，或失败原因与已检查的证据。")
             if name == "request_user":
+                if task["kind"] == "inspect" and REDUNDANT_INSPECTION_QUESTION.search(args["question"]):
+                    raise AppError("只读分析不需要用户确认是否继续、工具选择或可自行核实的版本；请继续调查并直接用 finish_task 交付已有结论及限制。")
                 task["metrics"]["interventions"] += 1
                 return self.end_attempt(session, "awaiting_user", "user_input", args["reason"], question=args["question"], summary=str(args.get("summary", "")))
             return self.end_attempt(session, "failed", "reported_failure", args["reason"], evidence=args["evidence"])
@@ -1022,7 +1038,7 @@ class Workspace:
         task.update(outcome=outcome, phase=status)
         if status == "failed":
             task["finishedAt"] = now()
-        text = ("等待你补充信息：" if status == "awaiting_user" else "本次任务未完成：") + outcome["reason"]
+        text = ("任务已暂停，等待确认：" if status == "awaiting_user" else "本次任务未完成：") + outcome["reason"]
         for key in ["question", "summary", "evidence"]:
             if outcome.get(key):
                 text += "\n\n" + outcome[key]
@@ -1243,7 +1259,7 @@ class Workspace:
         if not isinstance(feedback, str) or len(feedback) > 16000:
             raise AppError("反馈不能超过 16000 字。")
         if session["status"] == "awaiting_user" and not feedback.strip() and not images:
-            raise AppError("请先在输入框回答当前问题，再继续任务。", 409)
+            raise AppError("请先在确认框回答当前问题，再继续任务。", 409)
         provider = self.find(self.data["providers"], session["providerId"], "原模型配置")
         task = self.continuation_target(session) if not feedback.strip() or continuation_request(feedback) else session["task"]
         self.check_task_scope({**session, "task": task}, provider)
@@ -1413,7 +1429,9 @@ class Workspace:
                     self.record(session, "context_compacted", keptMessages=len(history))
                 session["history"] = history
                 began = time.monotonic()
-                guidance = ("\n只读分析以回答用户问题为目标：优先阅读 README、项目清单和关键入口，"
+                guidance = ("\n只读分析以直接回答用户问题为目标：工具由你自行选择，按当前导入项目的版本核查；"
+                            "截图和当前代码不一致时交付已证实的结论并注明范围，不要求用户确认版本或是否继续；"
+                            "优先阅读 README、项目清单和关键入口，"
                             "掌握运行步骤与主要调用链后即可交付。无需逐页遍历所有源码或运行行为测试；"
                             "结论注明实际覆盖范围，不把未核实的建议当成已确认缺陷。") if task["kind"] == "inspect" else ""
                 converging = (task["kind"] == "inspect"
@@ -1427,7 +1445,7 @@ class Workspace:
                     guidance += ("\n现在进入只读分析交付阶段。本轮只可调用 finish_task、request_user 或 fail_task；"
                                 "停止搜索和读取。用已读源码、检查点和当前可见记录直接回答原问题；"
                                 "已核实的事实写明路径或行号，未核实部分明确范围。"
-                                "资料不足但仍可给出部分结论时完成并说明限制；确实无法回答时 fail_task。")
+                                "资料不足但仍可给出部分结论时完成并说明限制；只在缺少不可替代的用户输入时 request_user，确实无法回答时 fail_task。")
                 elif converging:
                     guidance += ("\n现在进入只读分析收敛阶段，停止全文搜索和加载更多 Skill。"
                                  "若尚未建立计划，用 update_plan 记录简短目标；若尚未读取源码，"
@@ -1538,7 +1556,7 @@ class Workspace:
                     continue
                 if not answer.get("tool_calls"):
                     session["history"].append({"role": "user", "content": (
-                        "请将基于已读源码的结论和范围写入 finish_task；只读分析不需要运行测试，缺少必要信息时 request_user。"
+                        "请将基于已读源码的结论和范围写入 finish_task；只读分析不需要运行测试，仅缺少不可替代的用户输入时 request_user。"
                         if task["kind"] == "inspect" else "文本不能作为完成依据，请继续验证并调用 finish_task；缺少信息时说明具体阻塞。")})
                     text_only_rounds += 1
                     if text_only_rounds >= 3:

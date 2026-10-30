@@ -1,6 +1,7 @@
 const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('shujinDesktop', {
-  version:'2.1.55',
+  version:'2.1.64',
+  showItemInFolder:(projectId,relativePath)=>ipcRenderer.invoke('file:show-in-folder',projectId,relativePath),
   openOfficial:bounds=>ipcRenderer.invoke('xhs:open',bounds),
   resizeOfficial:bounds=>ipcRenderer.invoke('xhs:bounds',bounds),
   setOfficialZoom:factor=>ipcRenderer.invoke('xhs:zoom',factor),

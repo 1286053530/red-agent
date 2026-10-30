@@ -41,6 +41,25 @@ async def test_desktop_requires_session_cookie(workspace, tmp_path):
         assert (await client.get("/", headers={"Cookie": "shujin_session=desktop-secret"})).status_code == 200
 
 
+async def test_owned_model_client_waits_ten_minutes_for_response(monkeypatch):
+    provider = {"baseUrl": "https://example.com/v1", "protocol": "compatible", "model": "fixture"}
+    client_type = httpx.AsyncClient
+    created = []
+
+    async def handler(request):
+        assert request.extensions["timeout"] == {"connect": 30, "read": 600, "write": 30, "pool": 30}
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    def make_client(**kwargs):
+        client = client_type(transport=httpx.MockTransport(handler), **kwargs)
+        created.append(client)
+        return client
+
+    monkeypatch.setattr(model.httpx, "AsyncClient", make_client)
+    assert (await call_model(provider, []))["content"] == "ok"
+    assert len(created) == 1 and created[0].is_closed
+
+
 async def test_openai_and_anthropic_protocols_and_failures():
     async def compatible(request):
         assert str(request.url) == "https://example.com/v1/chat/completions"
@@ -63,14 +82,16 @@ async def test_openai_and_anthropic_protocols_and_failures():
             {"role": "assistant", "content": "", "tool_calls": [{"id": "one", "function": {"name": "list_files", "arguments": "{}"}}]},
             {"role": "tool", "tool_call_id": "one", "content": "{}"}], client=client)
         assert result["content"] == "done"
-    for status in [400, 401, 403, 404, 422, 429, 500, 302]:
+    for status in [400, 401, 402, 403, 404, 422, 429, 500, 302]:
         requests = []
         async def rejected(request):
             requests.append(request)
             return httpx.Response(status)
         async with httpx.AsyncClient(transport=httpx.MockTransport(rejected)) as client:
-            with pytest.raises(AppError, match=str(status)):
+            with pytest.raises(AppError, match=str(status)) as error:
                 await call_model(provider, [{"role": "user", "content": "test"}], client=client)
+            if status == 402:
+                assert "账户余额或额度不足" in str(error.value)
         assert len(requests) == 1
 
 

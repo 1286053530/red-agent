@@ -20,7 +20,7 @@ export function startPythonBackend({ root, resources, packaged = false, dataDir,
   const lines = createInterface({ input: child.stdout });
   const exited = new Promise(resolve => child.once('close', (code, signal) => { closed = true; lines.close(); resolve({ code, signal }); if (!stopping) onExit(code, diagnostics); }));
   const startup = new Promise((resolve, reject) => {
-    const timer = setTimeout(() => { reject(new Error('Python 后端启动超时。' + diagnostics)); void stop(); }, 45000);
+    const timer = setTimeout(() => { reject(new Error('Python 后端启动超时。' + diagnostics)); void stop(); }, 120000);
     child.once('error', error => { clearTimeout(timer); reject(new Error('无法启动 Python 后端：' + error.message)); });
     child.once('close', code => { clearTimeout(timer); if (!ready) reject(new Error('Python 后端启动失败（' + code + '）：' + diagnostics)); });
     lines.on('line', async line => {

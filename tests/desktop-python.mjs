@@ -9,6 +9,8 @@ import { startPythonBackend } from '../desktop/python-backend.mjs';
 import { DesktopXhs } from '../desktop/xhs.mjs';
 
 const packaged = process.argv.includes('--packaged');
+const resourcesArg=process.argv.find(arg=>arg.startsWith('--resources='))?.slice('--resources='.length);
+const resources=resolve(resourcesArg||process.env.SHUJIN_TEST_RESOURCES||'release/win-unpacked/resources');
 app.on('window-all-closed',()=>{});
 let backend, win, xhs, folder;
 app.whenReady().then(async () => {
@@ -22,7 +24,7 @@ app.whenReady().then(async () => {
     let officialRequests=0;
     profile.webRequest.onCompleted(()=>{officialRequests++;});
     xhs=new DesktopXhs(win,{partition});
-    backend=await startPythonBackend({root:resolve('.'),resources:resolve('release/win-unpacked/resources'),packaged,dataDir:folder,
+    backend=await startPythonBackend({root:resolve('.'),resources,packaged,dataDir:folder,
       native:async(method,params)=>{
         if(method==='pick-folder')return {path:join(folder,'project')};
         if(method==='xhs:disconnect')return xhs.disconnect();
@@ -61,7 +63,7 @@ app.whenReady().then(async () => {
     assert.equal(officialRequests,0);
     await request('/api/xhs/disconnect',{});
     // Exercise bundled Node/Python supervision with a separate project interpreter.
-    const executable=packaged?resolve('release/win-unpacked/resources/backend/shujin-backend.exe'):resolve('.venv/Scripts/python.exe');
+    const executable=packaged?resolve(resources,'backend','shujin-backend.exe'):resolve('.venv/Scripts/python.exe');
     const {stdout}=await promisify(execFile)(executable,[...(packaged?[]:['-m','backend']),'--self-test','--self-test-python'],{cwd:resolve('.'),windowsHide:true,
       env:{...process.env,PYTHONUTF8:'1',SHUJIN_PROJECT_PYTHON:resolve('.venv/Scripts/python.exe'),SHUJIN_NODE_EXEC:process.execPath,SHUJIN_NODE_IS_ELECTRON:'1'}});
     assert.equal(JSON.parse(stdout.trim()).passed,true);

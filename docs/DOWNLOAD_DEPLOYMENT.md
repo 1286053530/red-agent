@@ -1,5 +1,92 @@
 # 安装包下载服务
 
+## 2.1.64：结果文件定位与文件夹菜单（本地交付）
+
+结果卡片文件可打开右侧目录中的对应文件；文件树右键提供“在文件夹中显示”。13 项结果卡片回归、桌面路径校验、源码/冻结后端桌面集成，以及解包版和 Portable 实际启动通过。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.64-x64.exe | 132546988 | `0a62fef2425fa0b130549ca5764d74ef373e8bddd923d619b8f08fc90664d0af` |
+| XiaozhuShujin-2.1.64-x64-Portable.exe | 132339563 | `d64d88fe5dab29031a6e8be3104fba5ea0b674b7abea0dcc8ae6ba29c893097b` |
+| XiaozhuShujin-Setup-2.1.64-x64.exe.blockmap | 139888 | `c4cad70b006166840d35ee48e0034bde1f9ef26a97c8ee0fbee462c3a150e0c3` |
+
+构建命令：`npm run dist:win -- --config.directories.output=release/isolated-2.1.64`；SHA-256 清单见 `release/SHA256SUMS-2.1.64.txt`，由 PowerShell 与 Windows `certutil` 独立复核。实际桌面启动报告为 `.local/python-check/app-unpacked-2.1.64.json` 和 `.local/python-check/app-portable-2.1.64.json`；源码与冻结后端桥接报告见 `.local/python-check/desktop-source-2.1.64.json` 和 `.local/python-check/desktop-packaged-2.1.64.json`。2.1.63 旧产物保留；仅本地构建，未上传公网，未验收交互安装、升级或卸载。
+
+## 2.1.63：保留已应用变更的展开状态（本地交付）
+
+任务仍在运行时，展开“已应用的变更与恢复”区域不会被后续轨迹轮询收起。13 项结果卡片回归通过（34.54 秒），包含浏览器在真实 1.5 秒轮询下展开后保持打开的回归。源码和冻结后端桌面集成、解包版、Portable 实际启动、冻结后端自检通过；桌面 API 200、匿名 API 403。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.63-x64.exe | 132546759 | `8aee5c1f9634aa9b4c309a40f2bad610618fbdea501371a5f39e0bdd2c8449e1` |
+| XiaozhuShujin-2.1.63-x64-Portable.exe | 132339324 | `8e1e2e8898c85821dd8557a0f48ba6bfa51c1eac07d0a03f697c115bb55d420f` |
+| XiaozhuShujin-Setup-2.1.63-x64.exe.blockmap | 139970 | `5035f4657fc170ce260905b6d5b045163c0e39aca20d58f9f071699e93593583` |
+
+构建命令：`npm run dist:win -- --config.directories.output=release/isolated-2.1.63`；将独立输出中的三个已验证产物复制至 `release/` 根目录。`release/SHA256SUMS-2.1.63.txt` 经 Python 独立复核，旧版本产物保持。未重跑全量回归，未验收交互安装、升级或卸载；本地构建，未上传公网。
+
+## 2.1.62：恢复任务时容忍项目文件锁定（本地交付）
+
+启动恢复历史验证证据时，Office `~$` 锁文件会被排除。其他源码或项目文件遇到权限和文件系统错误时，后端现在会保留工作区与会话，并把相关历史命令依据标记为无法确认；访问恢复后，重启时重新校验。新的命令仍必须读取并计算完整项目指纹，缺失或不可读源码不会被静默跳过来授予验证成功。
+
+112 项相关回归通过（148.37 秒），覆盖 Windows 独占锁、不可访问文件、历史证据恢复、多个会话保存。2.1.62 解包版和 Portable 使用用户数据副本及真实 Windows 文件锁启动，原 10 个会话保持、不可读源码对应检查证据失效，两个程序正常退出。源码与冻结后端桌面集成通过；桌面 API 200，匿名 API 403。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.62-x64.exe | 132546990 | `3aaeeed357f07d55b0f50cb39f28cf4f9720789b6034e944302f5e7cbcab0a3d` |
+| XiaozhuShujin-2.1.62-x64-Portable.exe | 132339570 | `a0bd7bdec0e2b63873dc71c143acae90fbfe840a7046d7782f4cfedf44847f13` |
+| XiaozhuShujin-Setup-2.1.62-x64.exe.blockmap | 140019 | `05414c34a3131bf74c25f682854c6981a74195354ce7321839dc5b59c189461f` |
+
+构建命令：`npm run dist:win`。清单 `release/SHA256SUMS-2.1.62.txt` 通过独立 Python 复核，2.1.60 和 2.1.61 旧版哈希保持。完整桌面启动报告见 `.local/python-check/app-packaged-history-2.1.62.json` 和 `app-portable-history-2.1.62.json`；未重跑全量回归，未验收交互安装、升级或卸载。本次仅本地构建，未上传公网。
+
+## 2.1.61：延长模型响应等待（本地交付）
+
+任务分类不再被单独的 30 秒时限中断；分类与正式调用统一使用 600 秒响应读取等待，连接、写入及连接池等待为 30 秒。分类同样支持最多五次失败尝试，等待与退避均可停止。每次读取的等待上限不代表整个任务总时限；上游模型或代理仍可能提前返回超时。
+
+110 项相关回归（97.02 秒）、源码/冻结后端桌面集成、解包版和实际 Portable 启动通过。冻结后端对本地 HTTP 样本先重试 503，再接受延迟 31 秒的分类响应，等待中停止耗时 0.015 秒。桌面桥接版本 2.1.61，API 200、匿名访问 403、正常退出。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.61-x64.exe | 132546521 | `0055004b470baf9280147aef502f668ff95e8af0c8ff58913a647b583ee00e45` |
+| XiaozhuShujin-2.1.61-x64-Portable.exe | 132339099 | `9c26b36305616072f639515697b19d1aabaee74aab29163bbf98a533c0ce9c05` |
+| XiaozhuShujin-Setup-2.1.61-x64.exe.blockmap | 140019 | `7a7235847dbd56501e5f00d8c3457b3bf2933147f77c36b5cab082d7a60a9b32` |
+
+构建命令：`npm run dist:win`。校验清单 `release/SHA256SUMS-2.1.61.txt` 已经 Python 独立复核；2.1.60 旧产物保持。启动报告为 `.local/python-check/app-packaged-2.1.61.json` 和 `app-portable-2.1.61.json`，冻结后端延迟与停止验证为 `backend-timeout-2.1.61.json`。未重跑全量回归，未用真实外部模型验收，未验收交互安装、升级或卸载；仅本地构建，未上传公网。
+
+## 2.1.60：只读分析自主核查（本地交付）
+
+只读分析现在自行选择读取工具、依据当前项目版本作答，并在证据不足时给出有范围的结论；后端拒绝“是否继续”“用什么工具”“请补版本号”等无意义确认。模型服务 HTTP 402 明确标为所选服务商账户余额或额度不足。定向回归 57 项、修正旧弹窗测试操作后的全量 363 项通过；冻结后端自检、独立解包版和 Portable 实际启动均通过，桌面桥接版本为 2.1.60。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.60-x64.exe | 132547532 | `904c20f74de68aff7e819be153c8de7c7295dd369ee0d146d451e4db21427198` |
+| XiaozhuShujin-2.1.60-x64-Portable.exe | 132340108 | `015b440e7292c4fc2b62eccebbee968cbc5e4753fe6469f5d71c3c1c3413fe9a` |
+| XiaozhuShujin-Setup-2.1.60-x64.exe.blockmap | 140090 | `b593a9bd1cf8a95cfeddb13f1372d17b27a2af3ba998e3ad52c32148fe20dffc` |
+
+构建命令：`npm run dist:win -- --config.directories.output=release/isolated-2.1.60`，用于避开共享解包目录的并发占用；验收后将三项产物移至 release/ 根目录。校验清单：`release/SHA256SUMS-2.1.60.txt`。旧版本保留，仅本地构建；未使用真实外部模型复跑截图任务，未验收交互安装、升级或卸载。
+
+## 2.1.59：任务确认弹窗（本地交付）
+
+任务需要回答时自动弹出确认框；支持暂后回答、重新打开、保留草稿及提交后继续原任务。空白回答及提交失败在框内提示，不再要求在主输入框回答。弹窗相关 5 项回归、最后空白回答主流程复测、源码和冻结后端桌面桥接检查通过；独立解包版及 Portable 实际启动与界面检查均通过，桥接版本为 2.1.59。共享解包目录曾因并发重建出现调试连接超时，最终改用从 2.1.59 Portable 单独解出的程序验证通过。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.59-x64.exe | 132546832 | `f2a15b4efcd71e14460066decd5fb8ca8929c31b720cb15f02aebe4c206e0d13` |
+| XiaozhuShujin-2.1.59-x64-Portable.exe | 132339402 | `59179f9594b0f2673be752ddae36702f6a3b881308f755b93ac862477d6392f1` |
+| XiaozhuShujin-Setup-2.1.59-x64.exe.blockmap | 140168 | `6cf91ed383ccdd2eb5874ba9d3b4da626712c92eabe0c4383706a41b6062cde5` |
+
+构建命令：`npm run dist:win`。校验清单 `release/SHA256SUMS-2.1.59.txt` 经 Python 独立复核，实际启动报告为 `.local/python-check/app-packaged-2.1.59.json` 和 `app-portable-2.1.59.json`。旧版本产物保留。本版本仅本地构建，未上传公网；安装版已构建并校验哈希，未验收交互安装、升级或卸载。共享工作区另一会话后续版本需另行验收。
+
+## 2.1.57：延长 Python 后端启动等待（本地交付）
+
+将桌面客户端等待 Python 后端 ready 的时限从 45 秒延长至 120 秒。359 项 Python 回归、源码/冻结后端桌面集成检查，以及解包版和 Portable 实际启动检查通过。Windows x64 安装版、Portable 版及 blockmap 已生成；解包版和 Portable 启动时均检测到冻结后端进程运行。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| XiaozhuShujin-Setup-2.1.57-x64.exe | 132544902 | `81b6fce297c498a10459c844551f4e345c9ca0af10b74433ccf4982063c4be33` |
+| XiaozhuShujin-2.1.57-x64-Portable.exe | 132337467 | `d6883f9f6f3e428c22f2cd6405315888662a62804b29dd8ebf8d3f92134d892c` |
+
+校验清单：`release/SHA256SUMS-2.1.57.txt`。本版本仅本地构建，未上传公网；未验收交互安装、升级或卸载。
+
 ## 2.1.55：任务中的未知事项即时确认（本地交付）
 
 任务遇到无法自行核实且会影响任务方向、正确性、范围、安全或后续操作的未知事项时，立即暂停依赖该信息的动作并调用 `request_user`；不得猜测或等到交付阶段。49 项定向回归、冻结后端自检、桌面桥接、解包版及 Portable 启动检查通过。仅本地构建，未上传公网。

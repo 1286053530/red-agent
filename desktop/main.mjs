@@ -1,7 +1,8 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startPythonBackend } from './python-backend.mjs';
+import { resolveRegisteredProjectFile } from './project-file.mjs';
 import { DesktopXhs } from './xhs.mjs';
 
 const here=dirname(fileURLToPath(import.meta.url));
@@ -35,6 +36,13 @@ else {
     ipcMain.handle('xhs:hide',async event=>{trusted(event);return xhs.hide();});
     ipcMain.handle('xhs:resume',async(event,bounds)=>{trusted(event);xhs.setBounds(bounds);return xhs.show();});
     ipcMain.handle('xhs:close',async event=>{trusted(event);return xhs.close();});
+    ipcMain.handle('file:show-in-folder',async(event,projectId,relativePath)=>{
+      trusted(event);
+      const target=await resolveRegisteredProjectFile({origin,token:workbench.token,projectId,relativePath});
+      if(smokeTest)return {shown:target};
+      shell.showItemInFolder(target);
+      return {shown:true};
+    });
     win.webContents.on('did-start-loading',()=>void xhs.close());
     win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
     win.webContents.on('will-navigate',(event,url)=>{if(new URL(url).origin!==origin)event.preventDefault();});

@@ -3,7 +3,7 @@ import json
 
 import httpx
 import pytest
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, expect
 
 from backend.common import AppError
 from backend.images import validate_images
@@ -176,6 +176,8 @@ async def test_image_composer_and_dynamic_height(workspace, live_server):
             assert await page.locator('.dev-message-images img').evaluate('el=>el.complete && el.naturalWidth>0')
             await page.reload()
             await page.locator('.dev-message-images img').wait_for()
+            await expect(page.locator('#devConfirmationDialog')).to_be_visible()
+            await page.locator('#devConfirmationLater').click()
             await page.locator('[data-view-image]').click()
             assert await page.locator('#devImageViewer').is_visible()
             await page.keyboard.press('Escape')

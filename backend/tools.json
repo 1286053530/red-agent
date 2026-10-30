@@ -302,7 +302,7 @@
     "type": "function",
     "function": {
       "name": "request_user",
-      "description": "Call immediately when a material requirement, fact, scope, preference, or consequence cannot be reliably established with available project evidence/tools, when evidence conflicts, or when a user choice is required. Pause dependent actions; do not guess or defer the question. State confirmed facts, the specific unresolved point and impact, why tools cannot resolve it, and optional independent work already completed. This waits for the user and is never completion.",
+      "description": "Ask only when user-held information or a material user choice is indispensable and no useful bounded answer or safe default is possible. First check project source, history and available tools. For read-only analysis, choose tools yourself, use the current imported version, report evidence conflicts and uncertainty, and answer directly; never ask whether to continue, which tool to use, or for a version/commit that the project can supply. State the exact missing input and its impact. Model-service failures require fail_task, not user confirmation. This pauses the task and is never completion.",
       "parameters": {
         "type": "object",
         "properties": {

@@ -133,7 +133,11 @@ body[data-view="developer"] .main-content{padding-bottom:24px}
 .dev-result-card button.dev-result-view{border:1px solid #e9e9ec;border-radius:18px;padding:5px 12px}
 .dev-result-file{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-top:1px solid #f0f0f2}
 .dev-result-file:nth-child(odd){background:#f8f8fa}
-.dev-result-file>span:first-child{min-width:0;overflow-wrap:anywhere;color:#606268}
+.dev-result-file-locate{min-width:0;flex:1;text-align:left!important;overflow-wrap:anywhere;color:#606268!important;padding:0!important;border-radius:3px!important}
+.dev-result-file-locate:hover{color:#315deb!important;text-decoration:underline}
+.dev-file-context-menu{position:fixed;z-index:1000;min-width:170px;padding:4px;background:#fff;border:1px solid #dfe5ee;border-radius:5px;box-shadow:0 5px 18px #27364a26}
+.dev-file-context-menu button{display:block;width:100%;padding:8px 10px;border:0;border-radius:3px;background:transparent;text-align:left;color:#4d607f;font-size:12px}
+.dev-file-context-menu button:hover,.dev-file-context-menu button:focus-visible{background:#edf2ff;color:#315deb}
 .dev-result-more-files>summary{padding:8px 16px;border-top:1px solid #f0f0f2;cursor:pointer;color:#777a80}
 .dev-result-records{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 16px;margin-top:10px;color:#8a8d93;font-size:11px}
 .dev-result-records:has(details[open]){display:block}
@@ -148,5 +152,17 @@ body[data-view="developer"] .main-content{padding-bottom:24px}
 @media(max-width:600px){.dev-result-topic{padding:12px}.dev-result-files-head{flex-wrap:wrap;padding:12px;gap:8px}.dev-result-file-icon{width:34px;height:34px}.dev-result-file-actions{width:100%;justify-content:flex-end}.dev-result-file{padding:9px 12px}}
 .dev-chat-message.assistant .dev-message-content:has(.dev-result-card){width:100%;min-width:0}
 .dev-supplement-status { display: block; margin-top: 6px; color: var(--text-muted, #64748b); font-size: 12px; line-height: 1.6; }
+.dev-confirmation-dialog{width:min(520px,calc(100% - 32px));max-height:calc(100vh - 32px);overflow:auto;border:1px solid #dfe6f1;border-radius:12px;background:#fff;color:#455875;padding:24px;box-shadow:0 24px 70px rgba(25,42,77,.25)}
+.dev-confirmation-dialog::backdrop{background:rgba(28,42,66,.48)}
+.dev-confirmation-dialog h2{margin:0 0 12px;font-size:19px;color:#334c73}
+.dev-confirmation-reason,.dev-confirmation-summary{margin:0 0 12px;font-size:12px;line-height:1.7;color:#73829a;overflow-wrap:anywhere}
+.dev-confirmation-question{margin:0 0 18px;padding:12px 14px;border-radius:7px;background:#f2f6ff;color:#344f83;font-size:14px;font-weight:600;line-height:1.7;overflow-wrap:anywhere}
+.dev-confirmation-dialog label{display:block;margin-bottom:7px;font-size:12px;font-weight:600}
+.dev-confirmation-dialog textarea{display:block;width:100%;min-height:90px;resize:vertical;border:1px solid #d7e0ee;border-radius:7px;padding:10px;font:13px/1.6 inherit;color:#405674}
+.dev-confirmation-dialog textarea:focus-visible{outline:2px solid #315deb;outline-offset:2px}
+.dev-confirmation-dialog .dev-inline-error{margin:10px 0 0}
+.dev-confirmation-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+.dev-confirmation-actions button{min-height:34px;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer}
+.dev-confirmation-actions button:disabled{cursor:wait;opacity:.7}
 .dev-task-routing { font-size: 11px; line-height: 1.65; color: #536c9d; margin: 8px 0; overflow-wrap: anywhere; }
 .dev-send-button.is-supplement { width: auto; min-width: 76px; padding: 0 12px; white-space: nowrap; font-size: 12px; }

@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 
@@ -6,6 +7,44 @@ import pytest
 from playwright.async_api import async_playwright, expect
 
 from conftest import ROOT, settle, tool_call
+
+
+async def test_applied_changes_expansion_persists_during_run_polling(workspace, live_server):
+    w, project, provider, session = workspace
+    _, origin = live_server
+    session['changes'].append({'id': 'applied-fixture', 'taskId': 'prior-task', 'path': 'app.mjs',
+                               'original': 'before\n', 'content': 'after\n', 'status': 'applied',
+                               'reason': '已有修改'})
+    release = asyncio.Event()
+    request_started = asyncio.Event()
+
+    async def handler(request):
+        request_started.set()
+        await release.wait()
+        return httpx.Response(200, json={'choices': [{'message': {'content': '检查完成'}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client, async_playwright() as playwright:
+        w.model_client = client
+        browser = await playwright.chromium.launch(channel='msedge', headless=True)
+        try:
+            page = await browser.new_page(viewport={'width': 1440, 'height': 1000})
+            await page.route('https://images.unsplash.com/**', lambda route: route.abort())
+            await page.goto(origin)
+            await page.locator(f'[data-project-id="{project["id"]}"]').click()
+            await page.locator('#devPrompt').fill('检查项目')
+            await page.locator('#devSendButton').click()
+            await expect(page.locator('#devAgentStatus')).to_have_text('执行中')
+            await asyncio.wait_for(request_started.wait(), 5)
+            details = page.locator('.dev-applied-changes')
+            await details.locator(':scope > summary').click()
+            await expect(details).to_have_attribute('open', '')
+            await page.wait_for_timeout(3600)
+            await expect(page.locator('.dev-applied-changes')).to_have_attribute('open', '')
+            await page.locator('#devStopButton').click()
+            await expect(page.locator('#devAgentStatus')).to_have_text('已停止')
+        finally:
+            release.set()
+            await browser.close()
 
 
 async def test_completed_result_card_and_history(workspace, live_server):
@@ -38,6 +77,7 @@ async def test_completed_result_card_and_history(workspace, live_server):
         browser = await p.chromium.launch(channel='msedge', headless=True)
         try:
             page = await browser.new_page(viewport={'width': 1440, 'height': 1100})
+            await page.add_init_script("window.shujinDesktop={showItemInFolder:(projectId,path)=>{window.__shownFile={projectId,path};return Promise.resolve({shown:true});}}")
             await page.route('https://images.unsplash.com/**', lambda route: route.abort())
             await page.goto(origin)
             await page.locator(f'[data-project-id="{project["id"]}"]').click()
@@ -52,6 +92,25 @@ async def test_completed_result_card_and_history(workspace, live_server):
             await expect(card.locator('.dev-result-files-head .dev-result-stats')).to_have_text('+1−1')
             await expect(card.locator('.dev-result-heading, .dev-result-section')).to_have_count(0)
             await expect(card.locator('.dev-result-warning')).to_have_count(0)
+            await card.get_by_role('button', name='app.mjs').click()
+            assert await page.locator('[data-file-path="app.mjs"]').evaluate("el => el.classList.contains('active')")
+            await expect(page.locator('#devFilePreview')).to_contain_text('export const add=(a,b)=>a+b;')
+            await page.locator('[data-file-path="app.mjs"]').click(button='right')
+            await page.get_by_role('menuitem', name='在文件夹中显示').click()
+            await page.wait_for_function('window.__shownFile?.path === "app.mjs"')
+            assert await page.evaluate('window.__shownFile') == {'projectId': project['id'], 'path': 'app.mjs'}
+            nested = Path(project['path']) / 'src' / 'generated' / 'output.txt'
+            nested.parent.mkdir(parents=True)
+            nested.write_text('生成的嵌套文件内容\n', encoding='utf-8')
+            s['task']['result']['files'].append({'path': 'src/generated/output.txt', 'additions': 1, 'deletions': 0})
+            w.save()
+            await page.reload()
+            card = page.locator('[data-result-task]')
+            await card.get_by_role('button', name='src/generated/output.txt').click()
+            await expect(page.locator('[data-directory-path="src"]')).to_have_attribute('aria-expanded', 'true')
+            await expect(page.locator('[data-directory-path="src/generated"]')).to_have_attribute('aria-expanded', 'true')
+            assert await page.locator('[data-file-path="src/generated/output.txt"]').evaluate("el => el.classList.contains('active')")
+            await expect(page.locator('#devFilePreview')).to_contain_text('生成的嵌套文件内容')
             await card.get_by_text('检查记录（2）', exact=True).click()
             await expect(card.locator('pre').last).to_contain_text('pass 1')
             await card.get_by_role('button', name='查看修改').click()
